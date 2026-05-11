@@ -12,8 +12,17 @@ export const apiClient = axios.create({
 export type CreateTaskPayload = {
   url: string;
   output_dir: string;
+  download_target?: "video" | "audio" | "thumbnail";
   format_id?: string;
   resolution?: string;
+  resolution_mode?: "prefer" | "limit";
+  audio_format?: "mp3" | "m4a" | "opus" | "wav" | "flac";
+  subtitle_mode?: "none" | "manual" | "auto" | "all";
+  subtitle_langs?: string;
+  write_info_json?: boolean;
+  write_description?: boolean;
+  write_thumbnail?: boolean;
+  embed_thumbnail?: boolean;
   cookie_mode: "none" | "file" | "browser";
   cookie_value?: string;
 };

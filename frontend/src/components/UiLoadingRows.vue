@@ -30,7 +30,7 @@ withDefaults(
   height: 48px;
   border-radius: 12px;
   border: 1px solid var(--hairline);
-  background: linear-gradient(90deg, #fafafa 25%, #f3f4f6 37%, #fafafa 63%);
+  background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-highlight) 37%, var(--skeleton-base) 63%);
   background-size: 400% 100%;
   animation: shine 1.2s ease-in-out infinite;
 }

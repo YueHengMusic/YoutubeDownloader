@@ -19,7 +19,7 @@
       <table>
         <thead>
           <tr>
-            <th>{{ t("queue_table_file_name") }}</th>
+            <th>{{ t("queue_table_url") }}</th>
             <th>{{ t("queue_table_status") }}</th>
             <th>{{ t("queue_table_progress") }}</th>
             <th>{{ t("queue_table_action") }}</th>
@@ -27,7 +27,7 @@
         </thead>
         <tbody>
           <tr v-for="task in store.tasks" :key="task.id">
-            <td class="file_name" :title="task.url">{{ get_file_name_from_url(task.url, t("queue_file_name_unknown")) }}</td>
+            <td class="url">{{ task.url }}</td>
             <td><UiStatusTag :status="task.status" /></td>
             <td>{{ task.progress.toFixed(1) }}%</td>
             <td class="actions_cell">
@@ -52,7 +52,6 @@ import UiStatusTag from "@/components/UiStatusTag.vue";
 import UiEmptyState from "@/components/UiEmptyState.vue";
 import UiLoadingRows from "@/components/UiLoadingRows.vue";
 import { t } from "@/i18n/strings";
-import { get_file_name_from_url } from "@/utils/url_file_name";
 
 const store = useTaskRuntimeStore();
 
@@ -123,7 +122,7 @@ thead th {
   background: var(--surface-soft);
 }
 
-.file_name {
+.url {
   max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;

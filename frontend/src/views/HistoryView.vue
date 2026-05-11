@@ -26,7 +26,7 @@
           <UiStatusTag :status="item.status" />
           <span class="time">{{ item.updated_at }}</span>
         </div>
-        <p class="file_name" :title="item.url">{{ get_file_name_from_url(item.url, t("history_file_name_unknown")) }}</p>
+        <p class="url">{{ item.url }}</p>
         <div class="row_bottom">
           <button class="btn-secondary btn-sm" @click="store.deleteHistoryItem(item.id)">
             {{ t("history_action_delete") }}
@@ -44,7 +44,6 @@ import UiStatusTag from "@/components/UiStatusTag.vue";
 import UiEmptyState from "@/components/UiEmptyState.vue";
 import UiLoadingRows from "@/components/UiLoadingRows.vue";
 import { t } from "@/i18n/strings";
-import { get_file_name_from_url } from "@/utils/url_file_name";
 
 const store = useHistoryStore();
 onMounted(() => {
@@ -108,13 +107,10 @@ h2 {
   font-size: 12px;
 }
 
-.file_name {
+.url {
   margin: 8px 0 0;
   font-size: 14px;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-all;
 }
 
 .row_bottom {

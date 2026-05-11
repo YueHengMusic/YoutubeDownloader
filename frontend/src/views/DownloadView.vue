@@ -26,12 +26,56 @@
         <button class="btn-secondary" type="button" @click="pickDir">{{ t("common_select") }}</button>
       </div>
 
+      <label>{{ t("download_label_target") }}</label>
+      <UiSelect v-model="downloadTarget" :options="download_target_options" />
+
+      <label>{{ t("download_label_subtitle_mode") }}</label>
+      <UiSelect v-model="subtitleMode" :options="subtitle_mode_options" :disabled="downloadTarget === 'thumbnail'" />
+      <UiHint v-if="downloadTarget === 'thumbnail'">
+        {{ t("download_hint_subtitle_disabled_thumbnail") }}
+      </UiHint>
+
       <template v-if="formMode === 'advanced'">
+        <template v-if="downloadTarget === 'audio'">
+          <label>{{ t("download_label_audio_format") }}</label>
+          <UiSelect v-model="audioFormat" :options="audio_format_options" />
+        </template>
+
+        <template v-if="downloadTarget === 'video'">
         <label>{{ t("download_label_format_id") }}</label>
         <input v-model="formatId" :placeholder="t('download_placeholder_format_id')" />
 
         <label>{{ t("download_label_resolution") }}</label>
         <input v-model="resolution" :placeholder="t('download_placeholder_resolution')" />
+          <label>{{ t("download_label_resolution_mode") }}</label>
+          <UiSelect v-model="resolutionMode" :options="resolution_mode_options" />
+        </template>
+        <template v-if="subtitleMode !== 'none'">
+          <label>{{ t("download_label_subtitle_langs") }}</label>
+          <input v-model="subtitleLangs" :placeholder="t('download_placeholder_subtitle_langs')" :disabled="downloadTarget === 'thumbnail'" />
+        </template>
+
+        <div class="check_list">
+          <label class="check_item">
+            <input v-model="writeInfoJson" type="checkbox" />
+            <span>{{ t("download_option_write_info_json") }}</span>
+          </label>
+          <label class="check_item">
+            <input v-model="writeDescription" type="checkbox" />
+            <span>{{ t("download_option_write_description") }}</span>
+          </label>
+          <label class="check_item">
+            <input v-model="writeThumbnail" type="checkbox" :disabled="downloadTarget === 'thumbnail'" />
+            <span>{{ t("download_option_write_thumbnail") }}</span>
+          </label>
+          <label class="check_item">
+            <input v-model="embedThumbnail" type="checkbox" :disabled="downloadTarget === 'thumbnail'" />
+            <span>{{ t("download_option_embed_thumbnail") }}</span>
+          </label>
+        </div>
+        <UiHint v-if="downloadTarget === 'thumbnail'">
+          {{ t("download_hint_embed_thumbnail_disabled_thumbnail") }}
+        </UiHint>
       </template>
 
       <div class="label_with_tip">
@@ -71,15 +115,29 @@ import { computed, ref, watch } from "vue";
 import { useTaskRuntimeStore } from "@/stores/taskRuntime";
 import { t } from "@/i18n/strings";
 import UiSelect, { type UiSelectOption } from "@/components/UiSelect.vue";
+import UiHint from "@/components/UiHint.vue";
 
 type CookieMode = "none" | "file" | "browser";
 type DownloadFormMode = "simple" | "advanced";
+type DownloadTarget = "video" | "audio" | "thumbnail";
+type ResolutionMode = "prefer" | "limit";
+type AudioFormat = "mp3" | "m4a" | "opus" | "wav" | "flac";
+type SubtitleMode = "none" | "manual" | "auto" | "all";
 
 type DownloadFormDraft = {
   formMode: DownloadFormMode;
   outputDir: string;
+  downloadTarget: DownloadTarget;
   formatId: string;
   resolution: string;
+  resolutionMode: ResolutionMode;
+  audioFormat: AudioFormat;
+  subtitleMode: SubtitleMode;
+  subtitleLangs: string;
+  writeInfoJson: boolean;
+  writeDescription: boolean;
+  writeThumbnail: boolean;
+  embedThumbnail: boolean;
   cookieMode: CookieMode;
   cookieValue: string;
 };
@@ -98,10 +156,19 @@ function load_form_draft(): DownloadFormDraft {
       return {
         formMode: "simple",
         outputDir: ".",
+        downloadTarget: "video",
         formatId: "",
         resolution: "",
-        cookieMode: "none",
-        cookieValue: ""
+        resolutionMode: "prefer",
+        audioFormat: "mp3",
+        subtitleMode: "none",
+        subtitleLangs: "",
+        writeInfoJson: false,
+        writeDescription: false,
+        writeThumbnail: false,
+        embedThumbnail: false,
+        cookieMode: "browser",
+        cookieValue: "edge"
       };
     }
     const parsed = JSON.parse(raw) as Partial<DownloadFormDraft>;
@@ -110,8 +177,21 @@ function load_form_draft(): DownloadFormDraft {
     return {
       formMode,
       outputDir: parsed.outputDir || ".",
+      downloadTarget: parsed.downloadTarget === "audio" || parsed.downloadTarget === "thumbnail" ? parsed.downloadTarget : "video",
       formatId: parsed.formatId || "",
       resolution: parsed.resolution || "",
+      resolutionMode: parsed.resolutionMode === "limit" ? "limit" : "prefer",
+      audioFormat:
+        parsed.audioFormat === "m4a" || parsed.audioFormat === "opus" || parsed.audioFormat === "wav" || parsed.audioFormat === "flac"
+          ? parsed.audioFormat
+          : "mp3",
+      subtitleMode:
+        parsed.subtitleMode === "manual" || parsed.subtitleMode === "auto" || parsed.subtitleMode === "all" ? parsed.subtitleMode : "none",
+      subtitleLangs: parsed.subtitleLangs || "",
+      writeInfoJson: Boolean(parsed.writeInfoJson),
+      writeDescription: Boolean(parsed.writeDescription),
+      writeThumbnail: Boolean(parsed.writeThumbnail),
+      embedThumbnail: Boolean(parsed.embedThumbnail),
       cookieMode,
       cookieValue: parsed.cookieValue || ""
     };
@@ -119,10 +199,19 @@ function load_form_draft(): DownloadFormDraft {
     return {
       formMode: "simple",
       outputDir: ".",
+      downloadTarget: "video",
       formatId: "",
       resolution: "",
-      cookieMode: "none",
-      cookieValue: ""
+      resolutionMode: "prefer",
+      audioFormat: "mp3",
+      subtitleMode: "none",
+      subtitleLangs: "",
+      writeInfoJson: false,
+      writeDescription: false,
+      writeThumbnail: false,
+      embedThumbnail: false,
+      cookieMode: "browser",
+      cookieValue: "edge"
     };
   }
 }
@@ -137,8 +226,17 @@ const initialDraft = load_form_draft();
 const url = ref("");
 const formMode = ref<DownloadFormMode>(initialDraft.formMode);
 const outputDir = ref(initialDraft.outputDir);
+const downloadTarget = ref<DownloadTarget>(initialDraft.downloadTarget);
 const formatId = ref(initialDraft.formatId);
 const resolution = ref(initialDraft.resolution);
+const resolutionMode = ref<ResolutionMode>(initialDraft.resolutionMode);
+const audioFormat = ref<AudioFormat>(initialDraft.audioFormat);
+const subtitleMode = ref<SubtitleMode>(initialDraft.subtitleMode);
+const subtitleLangs = ref(initialDraft.subtitleLangs);
+const writeInfoJson = ref(initialDraft.writeInfoJson);
+const writeDescription = ref(initialDraft.writeDescription);
+const writeThumbnail = ref(initialDraft.writeThumbnail);
+const embedThumbnail = ref(initialDraft.embedThumbnail);
 const cookieMode = ref<CookieMode>(initialDraft.cookieMode);
 const cookieValue = ref(initialDraft.cookieValue);
 const showCookieTip = ref(false);
@@ -152,22 +250,86 @@ const cookie_browser_options = computed<UiSelectOption[]>(() => [
   { value: "chrome", label: t("download_cookie_browser_chrome") },
   { value: "edge", label: t("download_cookie_browser_edge") }
 ]);
+const download_target_options = computed<UiSelectOption[]>(() => [
+  { value: "video", label: t("download_target_video") },
+  { value: "audio", label: t("download_target_audio") },
+  { value: "thumbnail", label: t("download_target_thumbnail") }
+]);
+const resolution_mode_options = computed<UiSelectOption[]>(() => [
+  { value: "prefer", label: t("download_resolution_mode_prefer") },
+  { value: "limit", label: t("download_resolution_mode_limit") }
+]);
+const audio_format_options = computed<UiSelectOption[]>(() => [
+  { value: "mp3", label: "mp3" },
+  { value: "m4a", label: "m4a" },
+  { value: "opus", label: "opus" },
+  { value: "wav", label: "wav" },
+  { value: "flac", label: "flac" }
+]);
+const subtitle_mode_options = computed<UiSelectOption[]>(() => [
+  { value: "none", label: t("download_subtitle_mode_none") },
+  { value: "manual", label: t("download_subtitle_mode_manual") },
+  { value: "auto", label: t("download_subtitle_mode_auto") },
+  { value: "all", label: t("download_subtitle_mode_all") }
+]);
 
-watch([formMode, outputDir, formatId, resolution, cookieMode, cookieValue], () => {
+watch(
+  [
+    formMode,
+    outputDir,
+    downloadTarget,
+    formatId,
+    resolution,
+    resolutionMode,
+    audioFormat,
+    subtitleMode,
+    subtitleLangs,
+    writeInfoJson,
+    writeDescription,
+    writeThumbnail,
+    embedThumbnail,
+    cookieMode,
+    cookieValue
+  ],
+  () => {
   save_form_draft({
     formMode: formMode.value,
     outputDir: outputDir.value,
+    downloadTarget: downloadTarget.value,
     formatId: formatId.value,
     resolution: resolution.value,
+    resolutionMode: resolutionMode.value,
+    audioFormat: audioFormat.value,
+    subtitleMode: subtitleMode.value,
+    subtitleLangs: subtitleLangs.value,
+    writeInfoJson: writeInfoJson.value,
+    writeDescription: writeDescription.value,
+    writeThumbnail: writeThumbnail.value,
+    embedThumbnail: embedThumbnail.value,
     cookieMode: cookieMode.value,
     cookieValue: cookieValue.value
   });
+  }
+);
+
+watch(downloadTarget, (target) => {
+  // 非视频模式下避免遗留的视频参数造成混淆。
+  if (target !== "video") {
+    formatId.value = "";
+  }
+  if (target === "thumbnail") {
+    // 仅封面模式下，清理无意义选项，避免用户误解这些开关会生效。
+    writeThumbnail.value = true;
+    embedThumbnail.value = false;
+    subtitleMode.value = "none";
+    subtitleLangs.value = "";
+  }
 });
 
 watch(cookieMode, (mode) => {
   // 浏览器模式下仅允许固定枚举值，避免手输拼写导致后端参数无效。
   if (mode === "browser" && cookieValue.value !== "chrome" && cookieValue.value !== "edge") {
-    cookieValue.value = "chrome";
+    cookieValue.value = "edge";
   }
   if (mode === "none") {
     cookieValue.value = "";
@@ -212,8 +374,17 @@ async function submit() {
   await store.createTask({
     url: url.value,
     output_dir: outputDir.value,
-    format_id: formatId.value || undefined,
-    resolution: resolution.value || undefined,
+    download_target: downloadTarget.value,
+    format_id: downloadTarget.value === "video" ? formatId.value || undefined : undefined,
+    resolution: downloadTarget.value === "video" ? resolution.value || undefined : undefined,
+    resolution_mode: downloadTarget.value === "video" ? resolutionMode.value : undefined,
+    audio_format: downloadTarget.value === "audio" ? audioFormat.value : undefined,
+    subtitle_mode: subtitleMode.value,
+    subtitle_langs: subtitleMode.value !== "none" ? subtitleLangs.value || undefined : undefined,
+    write_info_json: writeInfoJson.value,
+    write_description: writeDescription.value,
+    write_thumbnail: downloadTarget.value === "thumbnail" ? true : writeThumbnail.value,
+    embed_thumbnail: downloadTarget.value === "thumbnail" ? false : embedThumbnail.value,
     cookie_mode: cookieMode.value,
     cookie_value: cookieValue.value || undefined
   });
@@ -320,6 +491,26 @@ label {
   flex-direction: column;
   gap: 8px;
 }
+
+.check_list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px 12px;
+}
+
+.check_item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--body);
+}
+
+.check_item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
 
 .label_with_tip {
   display: flex;

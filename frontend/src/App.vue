@@ -14,6 +14,17 @@
         <RouterLink class="nav-link" to="/about">{{ t("nav_about") }}</RouterLink>
       </nav>
       <div class="side-actions">
+        <div class="theme-switch">
+          <span class="lang-label">{{ t("nav_theme_label") }}</span>
+          <div class="lang-pill-group">
+            <button class="lang-pill" :class="{ active: theme_mode === 'light' }" type="button" @click="setThemeMode('light')">
+              {{ t("nav_theme_light") }}
+            </button>
+            <button class="lang-pill" :class="{ active: theme_mode === 'dark' }" type="button" @click="setThemeMode('dark')">
+              {{ t("nav_theme_dark") }}
+            </button>
+          </div>
+        </div>
         <div class="lang-switch">
           <span class="lang-label">{{ t("nav_language_label") }}</span>
           <div class="lang-pill-group">
@@ -42,14 +53,51 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, watch } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRealtimeTaskStore } from "@/stores/realtime";
 import { useUiStore } from "@/stores/ui";
 import { locale_ref, setLocale, t } from "@/i18n/strings";
 
+type ThemeMode = "light" | "dark";
+const THEME_MODE_STORAGE_KEY = "yt_dlp_gui_theme_mode";
+
 const uiStore = useUiStore();
 const realtimeStore = useRealtimeTaskStore();
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
+
+function detectThemeMode(): ThemeMode {
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function loadInitialThemeMode(): ThemeMode {
+  if (typeof localStorage !== "undefined") {
+    const savedThemeMode = localStorage.getItem(THEME_MODE_STORAGE_KEY);
+    if (savedThemeMode === "light" || savedThemeMode === "dark") {
+      return savedThemeMode;
+    }
+  }
+  return detectThemeMode();
+}
+
+const theme_mode = ref<ThemeMode>(loadInitialThemeMode());
+
+function setThemeMode(mode: ThemeMode) {
+  theme_mode.value = mode;
+}
+
+watch(
+  theme_mode,
+  (mode) => {
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", mode);
+    }
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(THEME_MODE_STORAGE_KEY, mode);
+    }
+  },
+  { immediate: true }
+);
 
 watch(
   () => `${uiStore.notice.visible}:${uiStore.notice.nonce}`,
@@ -78,6 +126,7 @@ onMounted(() => {
 
 <style>
 :root {
+  color-scheme: light;
   --primary: #000000;
   --on-primary: #ffffff;
   --ink: #000000;
@@ -99,6 +148,64 @@ onMounted(() => {
   --card_padding_compact: 16px;
   /* 页面主内容最大宽度：窗口足够时自动变宽，不再固定窄列。 */
   --layout_max_width: 1160px;
+  --notice-bg: #ffffff;
+  --notice-success-bg: #f0fdf4;
+  --notice-success-border: #bbf7d0;
+  --notice-error-bg: #fef2f2;
+  --notice-error-border: #fecaca;
+  --select-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  --select-option-selected-bg: #f3f4f6;
+  --status-running-border: #bfdbfe;
+  --status-running-bg: #eff6ff;
+  --status-running-text: #1d4ed8;
+  --status-completed-border: #bbf7d0;
+  --status-completed-bg: #f0fdf4;
+  --status-completed-text: #166534;
+  --status-failed-border: #fecaca;
+  --status-failed-bg: #fef2f2;
+  --status-failed-text: #991b1b;
+  --status-canceled-border: #e5e7eb;
+  --status-canceled-bg: #f9fafb;
+  --status-canceled-text: #4b5563;
+  --skeleton-base: #fafafa;
+  --skeleton-highlight: #f3f4f6;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --primary: #e5e7eb;
+  --on-primary: #111827;
+  --ink: #f3f4f6;
+  --ink-deep: #ffffff;
+  --charcoal: #d1d5db;
+  --body: #9ca3af;
+  --mute: #6b7280;
+  --canvas: #0f1115;
+  --surface-soft: #171a21;
+  --hairline: #2b313d;
+  --hairline-strong: #3a4150;
+  --focus-ring: rgba(96, 165, 250, 0.4);
+  --notice-bg: #171a21;
+  --notice-success-bg: #0f2a1d;
+  --notice-success-border: #1e5d3a;
+  --notice-error-bg: #331a1d;
+  --notice-error-border: #7f1d1d;
+  --select-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+  --select-option-selected-bg: #202634;
+  --status-running-border: #1e3a8a;
+  --status-running-bg: #172554;
+  --status-running-text: #bfdbfe;
+  --status-completed-border: #166534;
+  --status-completed-bg: #052e16;
+  --status-completed-text: #86efac;
+  --status-failed-border: #7f1d1d;
+  --status-failed-bg: #450a0a;
+  --status-failed-text: #fecaca;
+  --status-canceled-border: #374151;
+  --status-canceled-bg: #1f2937;
+  --status-canceled-text: #d1d5db;
+  --skeleton-base: #171a21;
+  --skeleton-highlight: #202634;
 }
 
 * {
@@ -206,6 +313,12 @@ a {
   gap: 6px;
 }
 
+.theme-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .side-actions {
   margin-top: auto;
   display: flex;
@@ -273,7 +386,7 @@ a {
   align-items: center;
   justify-content: flex-start;
   font-size: 14px;
-  background: #ffffff;
+  background: var(--notice-bg);
 }
 
 .page {
@@ -285,13 +398,13 @@ a {
 }
 
 .notice[data-type="success"] {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: var(--notice-success-border);
+  background: var(--notice-success-bg);
 }
 
 .notice[data-type="error"] {
-  border-color: #fecaca;
-  background: #fef2f2;
+  border-color: var(--notice-error-border);
+  background: var(--notice-error-bg);
 }
 
 .page-content {

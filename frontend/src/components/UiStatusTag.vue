@@ -32,26 +32,26 @@ const label = computed(() => taskStatusText(props.status));
 }
 
 .tag[data-status="running"] {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border-color: var(--status-running-border);
+  background: var(--status-running-bg);
+  color: var(--status-running-text);
 }
 
 .tag[data-status="completed"] {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-  color: #166534;
+  border-color: var(--status-completed-border);
+  background: var(--status-completed-bg);
+  color: var(--status-completed-text);
 }
 
 .tag[data-status="failed"] {
-  border-color: #fecaca;
-  background: #fef2f2;
-  color: #991b1b;
+  border-color: var(--status-failed-border);
+  background: var(--status-failed-bg);
+  color: var(--status-failed-text);
 }
 
 .tag[data-status="canceled"] {
-  border-color: #e5e7eb;
-  background: #f9fafb;
-  color: #4b5563;
+  border-color: var(--status-canceled-border);
+  background: var(--status-canceled-bg);
+  color: var(--status-canceled-text);
 }
 </style>

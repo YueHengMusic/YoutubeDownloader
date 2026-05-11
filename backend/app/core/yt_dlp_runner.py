@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Awaitable, Callable
 
 from app.core.cookie_manager import CookieManager
-from app.models.task import DownloadTask, TaskStatus
+from app.models.task import DownloadTarget, DownloadTask, ResolutionMode, SubtitleMode, TaskStatus
 
 ProgressCallback = Callable[[DownloadTask], Awaitable[None]]
 TerminalCallback = Callable[[dict], Awaitable[None]]
@@ -38,10 +38,46 @@ class YtDlpRunner:
             "-o",
             output_tpl,
         ]
-        if task.format_id:
+
+        if task.download_target == DownloadTarget.audio:
+            cmd.extend(["-x", "--audio-format", task.audio_format or "mp3"])
+
+        if task.download_target == DownloadTarget.thumbnail:
+            # 仅封面模式：不下载媒体本体，仅写封面文件。
+            cmd.append("--skip-download")
+            cmd.append("--write-thumbnail")
+        elif task.write_thumbnail:
+            cmd.append("--write-thumbnail")
+
+        if task.embed_thumbnail:
+            cmd.append("--embed-thumbnail")
+
+        if task.subtitle_mode == SubtitleMode.manual:
+            cmd.append("--write-subs")
+        elif task.subtitle_mode == SubtitleMode.auto:
+            cmd.append("--write-auto-subs")
+        elif task.subtitle_mode == SubtitleMode.all:
+            cmd.extend(["--write-subs", "--write-auto-subs"])
+
+        if task.subtitle_mode != SubtitleMode.none and task.subtitle_langs:
+            cmd.extend(["--sub-langs", task.subtitle_langs])
+
+        if task.write_info_json:
+            cmd.append("--write-info-json")
+
+        if task.write_description:
+            cmd.append("--write-description")
+
+        if task.download_target == DownloadTarget.video and task.format_id:
             cmd.extend(["-f", task.format_id])
-        if task.resolution:
-            cmd.extend(["-S", f"res:{task.resolution}"])
+
+        if task.download_target == DownloadTarget.video and task.resolution:
+            if task.resolution_mode == ResolutionMode.limit:
+                # 严格“上限分辨率”：尽量选不高于目标值的格式，找不到再按合并格式回退。
+                cmd.extend(["-f", f"bv*[height<={task.resolution}]+ba/b[height<={task.resolution}]"])
+            else:
+                # 偏好分辨率：作为排序优先级，不是硬性过滤。
+                cmd.extend(["-S", f"res:{task.resolution}"])
         cmd.extend(CookieManager.cookie_args(task.cookie_mode, task.cookie_value))
         cmd.append(task.url)
         return cmd

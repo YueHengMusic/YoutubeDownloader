@@ -137,7 +137,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--hairline);
   border-radius: 12px;
   background: var(--canvas);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--select-shadow);
   padding: 6px;
   display: flex;
   flex-direction: column;
@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
 }
 
 .ui_select_option.selected {
-  background: #f3f4f6;
+  background: var(--select-option-selected-bg);
 }
 
 .ui_select_option:disabled {

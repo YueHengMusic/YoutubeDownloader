@@ -106,8 +106,16 @@ async def dependencies() -> dict:
     yt_path = state_module.app_state.binary_locator.get_yt_dlp_path()
     ff_path = state_module.app_state.binary_locator.get_ffmpeg_path()
     return {
-        "yt_dlp": {"path": str(yt_path), "exists": yt_path.exists()},
-        "ffmpeg": {"path": str(ff_path), "exists": ff_path.exists()},
+        "yt_dlp": {
+            "path": str(yt_path),
+            "exists": yt_path.exists(),
+            "installing": state_module.app_state.is_installing_yt_dlp,
+        },
+        "ffmpeg": {
+            "path": str(ff_path),
+            "exists": ff_path.exists(),
+            "installing": state_module.app_state.is_installing_ffmpeg,
+        },
     }
 
 
@@ -130,10 +138,13 @@ async def yt_dlp_update() -> dict:
     if state_module.app_state is None:
         raise HTTPException(status_code=503, detail="App state not initialized")
     try:
+        state_module.app_state.is_installing_yt_dlp = True
         terminal_callback = _build_terminal_callback("system-yt-dlp")
         return await asyncio.to_thread(state_module.app_state.yt_dlp_updater.ensure_latest, terminal_callback)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"yt-dlp update failed: {exc}") from exc
+    finally:
+        state_module.app_state.is_installing_yt_dlp = False
 
 
 @router.get("/ffmpeg/update-status")
@@ -155,7 +166,10 @@ async def ffmpeg_update() -> dict:
     if state_module.app_state is None:
         raise HTTPException(status_code=503, detail="App state not initialized")
     try:
+        state_module.app_state.is_installing_ffmpeg = True
         terminal_callback = _build_terminal_callback("system-ffmpeg")
         return await asyncio.to_thread(state_module.app_state.ffmpeg_updater.ensure_latest, terminal_callback)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"ffmpeg update failed: {exc}") from exc
+    finally:
+        state_module.app_state.is_installing_ffmpeg = False

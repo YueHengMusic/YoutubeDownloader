@@ -48,10 +48,12 @@ export type DependencyStatus = {
   yt_dlp: {
     path: string;
     exists: boolean;
+    installing: boolean;
   };
   ffmpeg: {
     path: string;
     exists: boolean;
+    installing: boolean;
   };
 };
 

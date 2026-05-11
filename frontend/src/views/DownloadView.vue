@@ -103,16 +103,25 @@
         <UiSelect v-model="cookieValue" :options="cookie_browser_options" />
       </div>
 
-      <button class="btn-primary" type="submit" :disabled="store.isSubmittingTask">
+      <button class="btn-primary" type="submit" :disabled="isSubmitDisabled">
         {{ store.isSubmittingTask ? t("download_submitting") : t("download_submit") }}
       </button>
+      <UiHint v-if="isDependencyInstalling">
+        {{ t("download_dependency_installing_hint") }}
+      </UiHint>
+      <UiHint v-else-if="!isDependencyReady">
+        {{ t("download_dependency_missing_hint") }}
+        <RouterLink class="hint_link" to="/settings">{{ t("download_dependency_go_settings") }}</RouterLink>
+        {{ t("download_dependency_go_settings_suffix") }}
+      </UiHint>
     </form>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useTaskRuntimeStore } from "@/stores/taskRuntime";
+import { useSystemStore } from "@/stores/system";
 import { t } from "@/i18n/strings";
 import UiSelect, { type UiSelectOption } from "@/components/UiSelect.vue";
 import UiHint from "@/components/UiHint.vue";
@@ -222,6 +231,7 @@ function save_form_draft(draft: DownloadFormDraft) {
 
 // 这个页面的表单状态（每个输入框都对应一个响应式变量）。
 const store = useTaskRuntimeStore();
+const systemStore = useSystemStore();
 const initialDraft = load_form_draft();
 const url = ref("");
 const formMode = ref<DownloadFormMode>(initialDraft.formMode);
@@ -272,6 +282,20 @@ const subtitle_mode_options = computed<UiSelectOption[]>(() => [
   { value: "auto", label: t("download_subtitle_mode_auto") },
   { value: "all", label: t("download_subtitle_mode_all") }
 ]);
+const isDependencyInstalling = computed(() => {
+  const dependencyStatus = systemStore.dependencyStatus;
+  if (!dependencyStatus) return false;
+  return dependencyStatus.yt_dlp.installing || dependencyStatus.ffmpeg.installing;
+});
+const isDependencyReady = computed(() => {
+  const dependencyStatus = systemStore.dependencyStatus;
+  if (!dependencyStatus) return false;
+  return dependencyStatus.yt_dlp.exists && dependencyStatus.ffmpeg.exists && !isDependencyInstalling.value;
+});
+const isSubmitDisabled = computed(() => {
+  return store.isSubmittingTask || !isDependencyReady.value || isDependencyInstalling.value;
+});
+let dependencyPollTimer: ReturnType<typeof setInterval> | null = null;
 
 watch(
   [
@@ -333,6 +357,20 @@ watch(cookieMode, (mode) => {
   }
   if (mode === "none") {
     cookieValue.value = "";
+  }
+});
+
+onMounted(async () => {
+  await systemStore.refreshDependencyStatus();
+  dependencyPollTimer = setInterval(() => {
+    void systemStore.refreshDependencyStatus();
+  }, 3000);
+});
+
+onBeforeUnmount(() => {
+  if (dependencyPollTimer) {
+    clearInterval(dependencyPollTimer);
+    dependencyPollTimer = null;
   }
 });
 
@@ -546,6 +584,12 @@ label {
 }
 
 .tip_card a {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.hint_link {
+  margin-left: 4px;
   color: var(--ink);
   text-decoration: underline;
 }

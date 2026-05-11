@@ -26,6 +26,8 @@ class AppState:
     ffmpeg_updater: FfmpegUpdater
     queue_manager: QueueManager
     settings_repo: SettingsRepository
+    is_installing_yt_dlp: bool = False
+    is_installing_ffmpeg: bool = False
 
 
 app_state: AppState | None = None
@@ -76,4 +78,6 @@ def init_state() -> AppState:
         ffmpeg_updater=ffmpeg_updater,
         queue_manager=queue_manager,
         settings_repo=settings_repo,
+        is_installing_yt_dlp=False,
+        is_installing_ffmpeg=False,
     )

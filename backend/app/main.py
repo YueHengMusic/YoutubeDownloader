@@ -60,34 +60,37 @@ async def startup() -> None:
             return emit
 
         async def ensure_missing_yt_dlp() -> None:
-            yt_path = app_state.binary_locator.get_yt_dlp_path()
-            if yt_path.exists():
-                return
-            app_state.is_installing_yt_dlp = True
-            try:
-                await asyncio.to_thread(
-                    app_state.yt_dlp_updater.ensure_latest,
-                    build_terminal_callback("system-yt-dlp"),
-                )
-            except Exception:
-                return
-            finally:
-                app_state.is_installing_yt_dlp = False
+            async with app_state.yt_dlp_install_lock:
+                yt_path = app_state.binary_locator.get_yt_dlp_path()
+                if yt_path.exists():
+                    return
+                app_state.is_installing_yt_dlp = True
+                try:
+                    await asyncio.to_thread(
+                        app_state.yt_dlp_updater.ensure_latest,
+                        build_terminal_callback("system-yt-dlp"),
+                    )
+                except Exception:
+                    return
+                finally:
+                    app_state.is_installing_yt_dlp = False
 
         async def ensure_missing_ffmpeg() -> None:
-            ff_path = app_state.binary_locator.get_ffmpeg_path()
-            if ff_path.exists():
-                return
-            app_state.is_installing_ffmpeg = True
-            try:
-                await asyncio.to_thread(
-                    app_state.ffmpeg_updater.ensure_latest,
-                    build_terminal_callback("system-ffmpeg"),
-                )
-            except Exception:
-                return
-            finally:
-                app_state.is_installing_ffmpeg = False
+            async with app_state.ffmpeg_install_lock:
+                ff_path = app_state.binary_locator.get_ffmpeg_path()
+                ffprobe_path = app_state.binary_locator.get_ffprobe_path()
+                if ff_path.exists() and ffprobe_path.exists():
+                    return
+                app_state.is_installing_ffmpeg = True
+                try:
+                    await asyncio.to_thread(
+                        app_state.ffmpeg_updater.ensure_latest,
+                        build_terminal_callback("system-ffmpeg"),
+                    )
+                except Exception:
+                    return
+                finally:
+                    app_state.is_installing_ffmpeg = False
 
         await asyncio.gather(ensure_missing_yt_dlp(), ensure_missing_ffmpeg())
 

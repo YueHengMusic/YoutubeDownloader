@@ -18,12 +18,24 @@ class BinaryLocator:
     def get_bin_root(self) -> Path:
         """
         动态推导二进制根目录。
+        兼容以下常见布局：
+        1) 开发态：<repo>/resources/bin
+        2) 打包态A：<resources>/bin（base_dir 可能是 <resources>）
+        3) 打包态B：<resources>/bin（base_dir 可能是 <resources>/backend）
         """
-        dev_style = self.base_dir / "resources" / "bin"
-        if dev_style.exists() or (self.base_dir / "resources").exists():
-            return dev_style
-        # 打包后 backend 通常位于 <resources>/backend，因此 bin 在其同级目录。
-        return self.base_dir.parent / "bin"
+        candidates = [
+            # 开发态：仓库根目录下 resources/bin
+            self.base_dir / "resources" / "bin",
+            # 打包态：base_dir 本身就是 resources
+            self.base_dir / "bin",
+            # 打包态：base_dir 是 resources/backend
+            self.base_dir.parent / "bin",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        # 若都不存在，优先回退到开发态结构，便于后续安装流程自动创建目录。
+        return candidates[0]
 
     def detect_platform_folder(self) -> str:
         """
@@ -44,4 +56,13 @@ class BinaryLocator:
     def get_ffmpeg_path(self) -> Path:
         folder = self.detect_platform_folder()
         exe = "ffmpeg.exe" if folder == "windows" else "ffmpeg"
+        return self.get_bin_root() / folder / exe
+
+    def get_ffprobe_path(self) -> Path:
+        """
+        ffprobe 与 ffmpeg 通常位于同一目录。
+        yt-dlp 的部分后处理能力会依赖 ffprobe，因此需要单独定位与校验。
+        """
+        folder = self.detect_platform_folder()
+        exe = "ffprobe.exe" if folder == "windows" else "ffprobe"
         return self.get_bin_root() / folder / exe

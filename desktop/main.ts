@@ -191,3 +191,8 @@ ipcMain.handle("shell:open-external-url", async (_event, rawUrl: string) => {
   await shell.openExternal(safeUrl);
   return true;
 });
+
+// IPC：读取应用版本号（优先来自 Electron 打包版本信息）。
+ipcMain.handle("app:get-version", async () => {
+  return app.getVersion();
+});

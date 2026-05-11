@@ -191,15 +191,14 @@ class FfmpegUpdater:
 
         raise RuntimeError(f"不支持的压缩格式: {archive_path.name}")
 
-    def _locate_ffmpeg_binary(self, root_dir: Path) -> Path:
+    def _locate_binary(self, root_dir: Path, binary_name: str) -> Path:
         """
-        在解压目录中递归查找 ffmpeg 可执行文件。
+        在解压目录中递归查找指定二进制文件。
         """
-        expected = "ffmpeg.exe" if self.platform_folder == "windows" else "ffmpeg"
-        for candidate in root_dir.rglob(expected):
+        for candidate in root_dir.rglob(binary_name):
             if candidate.is_file():
                 return candidate
-        raise RuntimeError("解压后未找到 ffmpeg 可执行文件")
+        raise RuntimeError(f"解压后未找到 {binary_name} 可执行文件")
 
     def download_latest(
         self,
@@ -234,18 +233,29 @@ class FfmpegUpdater:
             extract_dir.mkdir(parents=True, exist_ok=True)
             self._extract_archive(archive_path, extract_dir, terminal_callback)
 
-            source_binary = self._locate_ffmpeg_binary(extract_dir)
-            shutil.copy2(source_binary, self.ffmpeg_path)
+            ffmpeg_name = "ffmpeg.exe" if self.platform_folder == "windows" else "ffmpeg"
+            ffprobe_name = "ffprobe.exe" if self.platform_folder == "windows" else "ffprobe"
+            source_ffmpeg = self._locate_binary(extract_dir, ffmpeg_name)
+            source_ffprobe = self._locate_binary(extract_dir, ffprobe_name)
+            target_ffprobe = self.ffmpeg_path.with_name(ffprobe_name)
+
+            shutil.copy2(source_ffmpeg, self.ffmpeg_path)
+            shutil.copy2(source_ffprobe, target_ffprobe)
             self._emit_terminal_event(terminal_callback, "stdout", f"ffmpeg binary copied to: {self.ffmpeg_path}")
+            self._emit_terminal_event(terminal_callback, "stdout", f"ffprobe binary copied to: {target_ffprobe}")
 
         # 非 Windows 平台要给执行权限，否则会出现“权限不足无法执行”。
         if os.name != "nt":
-            current_mode = os.stat(self.ffmpeg_path).st_mode
-            os.chmod(self.ffmpeg_path, current_mode | 0o111)
+            ffprobe_path = self.ffmpeg_path.with_name("ffprobe")
+            ffmpeg_mode = os.stat(self.ffmpeg_path).st_mode
+            os.chmod(self.ffmpeg_path, ffmpeg_mode | 0o111)
+            if ffprobe_path.exists():
+                ffprobe_mode = os.stat(ffprobe_path).st_mode
+                os.chmod(ffprobe_path, ffprobe_mode | 0o111)
             self._emit_terminal_event(
                 terminal_callback,
                 "stdout",
-                "applied executable permission for ffmpeg binary",
+                "applied executable permission for ffmpeg/ffprobe binaries",
             )
 
         self._write_local_meta(
@@ -278,17 +288,32 @@ class FfmpegUpdater:
         installed_version = self.get_installed_version(terminal_callback)
         local_meta = self._read_local_meta()
         local_release_id = int(local_meta["release_id"]) if local_meta and "release_id" in local_meta else None
+        ffprobe_name = "ffprobe.exe" if self.platform_folder == "windows" else "ffprobe"
+        ffprobe_path = self.ffmpeg_path.with_name(ffprobe_name)
+        ffprobe_exists = ffprobe_path.exists()
 
         if local_release_id is None:
             has_update = installed_version is None or True
         else:
             has_update = local_release_id != latest.release_id
+        # 关键兜底：即使 release 已最新，只要缺少 ffprobe 也必须重新安装同版本资产。
+        if not ffprobe_exists:
+            has_update = True
 
         self._emit_terminal_event(
             terminal_callback,
             "status",
-            f"ffmpeg has_update={has_update} (local_release_id={local_release_id}, latest_release_id={latest.release_id})",
+            (
+                f"ffmpeg has_update={has_update} "
+                f"(local_release_id={local_release_id}, latest_release_id={latest.release_id}, ffprobe_exists={ffprobe_exists})"
+            ),
         )
+        if not ffprobe_exists:
+            self._emit_terminal_event(
+                terminal_callback,
+                "status",
+                f"ffprobe missing at {ffprobe_path}, will force reinstall ffmpeg package",
+            )
 
         return {
             "installed_version": installed_version,
@@ -298,6 +323,8 @@ class FfmpegUpdater:
             "local_release_id": local_release_id,
             "has_update": has_update,
             "binary_path": str(self.ffmpeg_path),
+            "ffprobe_path": str(ffprobe_path),
+            "ffprobe_exists": ffprobe_exists,
         }
 
     def ensure_latest(

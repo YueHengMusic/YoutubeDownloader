@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import asyncio
 
 from app.core.binary_locator import BinaryLocator
 from app.core.event_bus import EventBus
@@ -26,6 +27,8 @@ class AppState:
     ffmpeg_updater: FfmpegUpdater
     queue_manager: QueueManager
     settings_repo: SettingsRepository
+    yt_dlp_install_lock: asyncio.Lock
+    ffmpeg_install_lock: asyncio.Lock
     is_installing_yt_dlp: bool = False
     is_installing_ffmpeg: bool = False
 
@@ -78,6 +81,8 @@ def init_state() -> AppState:
         ffmpeg_updater=ffmpeg_updater,
         queue_manager=queue_manager,
         settings_repo=settings_repo,
+        yt_dlp_install_lock=asyncio.Lock(),
+        ffmpeg_install_lock=asyncio.Lock(),
         is_installing_yt_dlp=False,
         is_installing_ffmpeg=False,
     )

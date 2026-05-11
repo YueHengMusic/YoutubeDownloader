@@ -72,12 +72,25 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from "vue";
 import { t } from "@/i18n/strings";
 
 const yt_dlp_repo_url = "https://github.com/yt-dlp/yt-dlp";
 const project_repo_url = "https://github.com/YueHengMusic/YoutubeDownloader";
-const app_version = "1.0.0";
+const app_version = ref<string>("-");
 const current_year = new Date().getFullYear();
+
+onMounted(async () => {
+  // 版本号优先由 Electron 主进程提供；浏览器调试场景显示占位符。
+  try {
+    const version = await window.desktopAPI?.getAppVersion?.();
+    if (version && version.trim()) {
+      app_version.value = version.trim();
+    }
+  } catch {
+    // ignore
+  }
+});
 
 async function open_external_url(url: string) {
   /**

@@ -14,5 +14,9 @@ contextBridge.exposeInMainWorld("desktopAPI", {
   // 使用系统默认浏览器打开外部链接（例如插件商店地址）。
   openExternalUrl: async (url: string): Promise<boolean> => {
     return ipcRenderer.invoke("shell:open-external-url", url);
+  },
+  // 获取桌面应用版本号（来自主进程 app.getVersion）。
+  getAppVersion: async (): Promise<string> => {
+    return ipcRenderer.invoke("app:get-version");
   }
 });

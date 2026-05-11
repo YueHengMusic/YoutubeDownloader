@@ -14,6 +14,16 @@
         <RouterLink class="nav-link" to="/about">{{ t("nav_about") }}</RouterLink>
       </nav>
       <div class="side-actions">
+        <div class="speed-card">
+          <span class="speed-title">{{ t("nav_speed_title") }}</span>
+          <svg class="speed-chart" viewBox="0 0 196 64" preserveAspectRatio="none" aria-hidden="true">
+            <polyline class="speed-chart-line" :points="speed_chart_points" />
+          </svg>
+          <div class="speed-total-row">
+            <strong class="speed-total-value">{{ speed_display.value }}</strong>
+            <span class="speed-total-unit">{{ speed_display.unit }}</span>
+          </div>
+        </div>
         <div class="theme-switch">
           <span class="lang-label">{{ t("nav_theme_label") }}</span>
           <div class="lang-pill-group">
@@ -53,8 +63,9 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRealtimeTaskStore } from "@/stores/realtime";
+import { useTaskRuntimeStore } from "@/stores/taskRuntime";
 import { useUiStore } from "@/stores/ui";
 import { locale_ref, setLocale, t } from "@/i18n/strings";
 
@@ -63,7 +74,88 @@ const THEME_MODE_STORAGE_KEY = "yt_dlp_gui_theme_mode";
 
 const uiStore = useUiStore();
 const realtimeStore = useRealtimeTaskStore();
+const taskRuntimeStore = useTaskRuntimeStore();
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
+let speedChartTimer: ReturnType<typeof setInterval> | null = null;
+const speedChartSamples = ref<number[]>([]);
+const SPEED_CHART_MAX_POINTS = 28;
+
+function parse_speed_to_kb_per_second(speedText?: string): number {
+  /**
+   * 把后端任务速度文本（例如 `1.2MiB/s`、`850KB/s`）统一换算为 KB/s，
+   * 便于在侧边栏做总速度汇总和折线图绘制。
+   */
+  if (!speedText) return 0;
+  const normalized = speedText.trim().replaceAll(",", "");
+  const match = normalized.match(/([\d.]+)\s*([KMGTP]?i?B)\/s/i);
+  if (!match) return 0;
+  const value = Number(match[1]);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  const unit = match[2].toUpperCase();
+  const multiplierMap: Record<string, number> = {
+    B: 1 / 1024,
+    KB: 1,
+    KIB: 1,
+    MB: 1024,
+    MIB: 1024,
+    GB: 1024 * 1024,
+    GIB: 1024 * 1024,
+    TB: 1024 * 1024 * 1024,
+    TIB: 1024 * 1024 * 1024,
+    PB: 1024 * 1024 * 1024 * 1024,
+    PIB: 1024 * 1024 * 1024 * 1024
+  };
+  return value * (multiplierMap[unit] ?? 0);
+}
+
+const total_speed_kb = computed(() => {
+  const runningTasks = taskRuntimeStore.tasks.filter((task) => task.status === "running");
+  return runningTasks.reduce((sum, task) => sum + parse_speed_to_kb_per_second(task.speed), 0);
+});
+
+const speed_display = computed(() => {
+  /**
+   * 侧边栏速度显示做智能单位切换：
+   * - < 1KB/s 显示 B/s
+   * - >= 1KB/s 显示 KB/s
+   * - >= 1024KB/s 显示 MB/s
+   * - >= 1024MB/s 显示 GB/s
+   */
+  const kb = Math.max(total_speed_kb.value, 0);
+  if (kb < 1) {
+    return { value: (kb * 1024).toFixed(0), unit: t("nav_speed_unit_bps") };
+  }
+  if (kb < 1024) {
+    return { value: kb.toFixed(2), unit: t("nav_speed_unit_kbps") };
+  }
+  if (kb < 1024 * 1024) {
+    return { value: (kb / 1024).toFixed(2), unit: t("nav_speed_unit_mbps") };
+  }
+  return { value: (kb / (1024 * 1024)).toFixed(2), unit: t("nav_speed_unit_gbps") };
+});
+const speed_chart_max_value = computed(() => {
+  const maxValue = Math.max(...speedChartSamples.value, 0);
+  return maxValue > 0 ? maxValue : 1;
+});
+const speed_chart_points = computed(() => {
+  const points = speedChartSamples.value;
+  if (points.length <= 1) return "0,64 196,64";
+  const maxIndex = points.length - 1;
+  return points
+    .map((value, index) => {
+      const x = (index / maxIndex) * 196;
+      const y = 64 - (value / speed_chart_max_value.value) * 64;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+});
+
+function push_speed_sample() {
+  speedChartSamples.value.push(total_speed_kb.value);
+  if (speedChartSamples.value.length > SPEED_CHART_MAX_POINTS) {
+    speedChartSamples.value.splice(0, speedChartSamples.value.length - SPEED_CHART_MAX_POINTS);
+  }
+}
 
 function detectThemeMode(): ThemeMode {
   if (typeof window === "undefined") return "light";
@@ -116,11 +208,14 @@ watch(
 
 onBeforeUnmount(() => {
   if (noticeTimer) clearTimeout(noticeTimer);
+  if (speedChartTimer) clearInterval(speedChartTimer);
 });
 
 onMounted(() => {
   // 全局壳组件启动时就连接 WS，确保在任意页面都能收到实时终端输出。
   realtimeStore.connectWs();
+  push_speed_sample();
+  speedChartTimer = setInterval(push_speed_sample, 1000);
 });
 </script>
 
@@ -169,6 +264,7 @@ onMounted(() => {
   --status-canceled-text: #4b5563;
   --skeleton-base: #fafafa;
   --skeleton-highlight: #f3f4f6;
+  --speed-chart-line: #111111;
 }
 
 :root[data-theme="dark"] {
@@ -206,6 +302,7 @@ onMounted(() => {
   --status-canceled-text: #d1d5db;
   --skeleton-base: #171a21;
   --skeleton-highlight: #202634;
+  --speed-chart-line: #f3f4f6;
 }
 
 * {
@@ -324,6 +421,55 @@ a {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.speed-card {
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--canvas);
+  padding: 10px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.speed-title {
+  color: var(--body);
+  font-size: 12px;
+  padding-left: 2px;
+}
+
+.speed-chart {
+  width: 100%;
+  height: 56px;
+  display: block;
+}
+
+.speed-chart-line {
+  fill: none;
+  stroke: var(--speed-chart-line);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.speed-total-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.speed-total-value {
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.speed-total-unit {
+  font-size: 13px;
+  color: var(--body);
 }
 
 .lang-label {

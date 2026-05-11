@@ -8,6 +8,7 @@ Current plan: Windows support only.
 - Create download tasks visually (URL, format, resolution, cookie)
 - Download page supports `Simple / Advanced` mode switch (simple mode is beginner-friendly)
 - Download queue with real-time status
+- Sidebar speed card (total download speed + realtime line chart)
 - Log page (unified terminal command/output view)
 - History records (local SQLite)
 - About page (project intro, project version, repository, author contact, upstream links)

@@ -176,6 +176,22 @@ Failure example (404):
 }
 ```
 
+#### POST `/api/tasks/{task_id}/retry`
+Description: retry a failed task only (`failed` status only). A new task ID is created and enqueued.
+
+Path params:
+1. `task_id`: task ID
+
+Response: `DownloadTask`
+
+Failure example (400):
+
+```json
+{
+  "detail": "Only failed tasks can be retried"
+}
+```
+
 #### DELETE `/api/tasks/{task_id}`
 Description: delete a queued task (`running` tasks cannot be deleted directly; cancel first).
 
@@ -326,6 +342,9 @@ Response example:
   "ffmpeg": {
     "path": "D:/.../ffmpeg.exe",
     "exists": true,
+    "ffmpeg_exists": true,
+    "ffprobe_exists": true,
+    "ffprobe_path": "D:/.../ffprobe.exe",
     "installing": false
   }
 }
@@ -333,6 +352,9 @@ Response example:
 
 Field note:
 1. `installing`: whether this dependency is currently being downloaded/installed (`true` during auto-install or manual update)
+2. `ffmpeg.exists`: combined availability (`ffmpeg` and `ffprobe` must both exist)
+3. `ffmpeg.ffmpeg_exists`: whether `ffmpeg` executable exists
+4. `ffmpeg.ffprobe_exists`: whether `ffprobe` executable exists
 
 #### GET `/api/system/yt-dlp/update-status`
 Description: check `yt-dlp` update status.
@@ -387,7 +409,9 @@ Response example:
   "latest_published_at": "2026-05-10T00:00:00Z",
   "local_release_id": 123000000,
   "has_update": true,
-  "binary_path": "D:/.../ffmpeg.exe"
+  "binary_path": "D:/.../ffmpeg.exe",
+  "ffprobe_path": "D:/.../ffprobe.exe",
+  "ffprobe_exists": true
 }
 ```
 
@@ -405,6 +429,8 @@ Response example:
   "local_release_id": 123000000,
   "has_update": true,
   "binary_path": "D:/.../ffmpeg.exe",
+  "ffprobe_path": "D:/.../ffprobe.exe",
+  "ffprobe_exists": true,
   "updated_to_release": "latest",
   "asset": "ffmpeg-master-latest-win64-gpl.zip",
   "path": "D:/.../ffmpeg.exe",
@@ -474,6 +500,11 @@ curl -X POST "http://127.0.0.1:8000/api/tasks/{task_id}/cancel"
 ### 6.3 Delete Queued Task
 ```bash
 curl -X DELETE "http://127.0.0.1:8000/api/tasks/{task_id}"
+```
+
+### 6.3.1 Retry Failed Task
+```bash
+curl -X POST "http://127.0.0.1:8000/api/tasks/{task_id}/retry"
 ```
 
 ### 6.4 Delete One History Item

@@ -65,6 +65,18 @@ export const useTaskRuntimeStore = defineStore("taskRuntime", {
         ui.showNotice("error", t("notice_delete_task_failed", { error: extractErrorMessage(error) }));
       }
     },
+    async retryTask(taskId: string) {
+      const ui = useUiStore();
+      const realtime = useRealtimeTaskStore();
+      try {
+        await realtime.ensureWsReady();
+        const { data } = await runWithRetryOnceOnTimeout(() => apiClient.post<UiTask>(`/api/tasks/${taskId}/retry`));
+        this.upsertTask(data);
+        ui.showNotice("success", t("notice_retry_task_success"));
+      } catch (error) {
+        ui.showNotice("error", t("notice_retry_task_failed", { error: extractErrorMessage(error) }));
+      }
+    },
     async importCookie(path: string) {
       const ui = useUiStore();
       try {

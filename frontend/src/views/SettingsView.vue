@@ -125,9 +125,35 @@
           </span>
         </div>
         <div class="info_row">
-          <span class="info_key">{{ t("settings_label_binary_path") }}</span>
+          <span class="info_key">{{ t("settings_label_ffmpeg_exists") }}</span>
+          <span class="info_value">
+            {{
+              systemStore.dependencyStatus?.ffmpeg.ffmpeg_exists == null
+                ? t("common_dash")
+                : (systemStore.dependencyStatus.ffmpeg.ffmpeg_exists ? t("common_yes") : t("common_no"))
+            }}
+          </span>
+        </div>
+        <div class="info_row">
+          <span class="info_key">{{ t("settings_label_ffprobe_exists") }}</span>
+          <span class="info_value">
+            {{
+              systemStore.dependencyStatus?.ffmpeg.ffprobe_exists == null
+                ? t("common_dash")
+                : (systemStore.dependencyStatus.ffmpeg.ffprobe_exists ? t("common_yes") : t("common_no"))
+            }}
+          </span>
+        </div>
+        <div class="info_row">
+          <span class="info_key">{{ t("settings_label_ffmpeg_path") }}</span>
           <span class="info_value long">{{
             systemStore.ffmpegStatus?.binary_path || systemStore.dependencyStatus?.ffmpeg.path || t("common_dash")
+          }}</span>
+        </div>
+        <div class="info_row">
+          <span class="info_key">{{ t("settings_label_ffprobe_path") }}</span>
+          <span class="info_value long">{{
+            systemStore.ffmpegStatus?.ffprobe_path || systemStore.dependencyStatus?.ffmpeg.ffprobe_path || t("common_dash")
           }}</span>
         </div>
       </div>

@@ -34,7 +34,7 @@ class YtDlpRunner:
             "--no-color",
             "--progress",
             "--ffmpeg-location",
-            str(self.ffmpeg_path),
+            str(self.ffmpeg_path.parent),
             "-o",
             output_tpl,
         ]

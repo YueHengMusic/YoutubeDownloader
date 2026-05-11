@@ -12,6 +12,8 @@ declare global {
       pickCookieFile?: () => Promise<string | null>;
       // 使用系统默认浏览器打开外部链接。
       openExternalUrl?: (url: string) => Promise<boolean>;
+      // 获取应用版本号（桌面端由 Electron 主进程提供）。
+      getAppVersion?: () => Promise<string>;
     };
   }
 }

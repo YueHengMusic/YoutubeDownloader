@@ -31,8 +31,12 @@
             <td><UiStatusTag :status="task.status" /></td>
             <td>{{ task.progress.toFixed(1) }}%</td>
             <td class="actions_cell">
-              <button class="btn-secondary" @click="cancel(task.id)" :disabled="task.status !== 'running' && task.status !== 'pending'">
-                {{ t("queue_action_cancel") }}
+              <button
+                class="btn-secondary"
+                @click="task.status === 'failed' ? retry(task.id) : cancel(task.id)"
+                :disabled="task.status !== 'running' && task.status !== 'pending' && task.status !== 'failed'"
+              >
+                {{ task.status === "failed" ? t("queue_action_retry") : t("queue_action_cancel") }}
               </button>
               <button class="btn-secondary danger" @click="removeTask(task.id)" :disabled="task.status === 'running'">
                 {{ t("queue_action_delete") }}
@@ -62,6 +66,10 @@ onMounted(() => {
 
 async function cancel(taskId: string) {
   await store.cancelTask(taskId);
+}
+
+async function retry(taskId: string) {
+  await store.retryTask(taskId);
 }
 
 async function removeTask(taskId: string) {

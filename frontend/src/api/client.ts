@@ -42,6 +42,8 @@ export type FfmpegUpdateStatus = {
   local_release_id: number | null;
   has_update: boolean;
   binary_path: string;
+  ffprobe_path?: string;
+  ffprobe_exists?: boolean;
 };
 
 export type DependencyStatus = {
@@ -53,6 +55,9 @@ export type DependencyStatus = {
   ffmpeg: {
     path: string;
     exists: boolean;
+    ffmpeg_exists?: boolean;
+    ffprobe_exists?: boolean;
+    ffprobe_path?: string;
     installing: boolean;
   };
 };

@@ -4,6 +4,9 @@ This is a desktop application built with `Electron + Vue3 + FastAPI`.
 Its goal is to make `yt-dlp` command-line capabilities available through a GUI for beginners.
 Current plan: Windows support only.
 
+<img width="1184" height="967" alt="image" src="https://github.com/user-attachments/assets/c4cf2991-ed63-4e8d-ab42-0712bb4791fa" />
+<img width="1184" height="967" alt="image" src="https://github.com/user-attachments/assets/f05e67b5-b48b-4e41-95d9-56c0ca43c883" />
+
 ## What You Get
 - Create download tasks visually (URL, format, resolution, cookie)
 - Download page supports `Simple / Advanced` mode switch (simple mode is beginner-friendly)

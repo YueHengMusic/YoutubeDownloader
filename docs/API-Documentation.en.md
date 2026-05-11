@@ -1,33 +1,33 @@
-# YouTubeDownloader 后端接口文档
+# YouTubeDownloader Backend API Documentation
 
-## 1. 基础信息
-- 协议：`HTTP` + `WebSocket`
-- 默认地址：`http://127.0.0.1:8000`
-- 数据格式：`application/json`
-- 认证方式：当前版本无鉴权（仅本地桌面应用调用）
+## 1. Basic Information
+- Protocols: `HTTP` + `WebSocket`
+- Default address: `http://127.0.0.1:8000`
+- Data format: `application/json`
+- Auth: no authentication in current version (called by local desktop app only)
 
-## 2. 通用说明
-- 时间字段使用 ISO 格式字符串，例如：`2026-05-11T10:20:30.123456`
-- 常见错误结构：
+## 2. General Notes
+- Time fields use ISO datetime strings, for example: `2026-05-11T10:20:30.123456`
+- Common error structure:
 
 ```json
 {
-  "detail": "错误描述"
+  "detail": "Error message"
 }
 ```
 
-- 常见状态码：
-1. `200` 请求成功
-2. `400` 参数或业务校验失败
-3. `404` 资源不存在
-4. `422` 请求体验证失败（如并发下载数超范围）
-5. `500` 服务内部错误
-6. `503` 应用状态未初始化
+- Common status codes:
+1. `200` request succeeded
+2. `400` parameter or business validation failed
+3. `404` resource not found
+4. `422` request body validation failed (for example, invalid download concurrency range)
+5. `500` internal server error
+6. `503` app state not initialized
 
-## 3. 数据模型
+## 3. Data Models
 
 ### 3.1 CreateTaskRequest
-用于创建下载任务（`POST /api/tasks`）。
+Used to create a download task (`POST /api/tasks`).
 
 ```json
 {
@@ -49,25 +49,25 @@
 }
 ```
 
-字段说明：
-1. `url`：视频链接，必填
-2. `output_dir`：输出目录，必填
-3. `download_target`：下载目标，`video | audio | thumbnail`
-4. `format_id`：格式 ID，可选（仅 `video` 目标生效）
-5. `resolution`：分辨率，可选（仅 `video` 目标生效）
-6. `resolution_mode`：分辨率策略，`prefer | limit`（仅 `video` 目标生效）
-7. `audio_format`：音频格式，可选（仅 `audio` 目标生效）
-8. `subtitle_mode`：字幕模式，`none | manual | auto | all`
-9. `subtitle_langs`：字幕语言表达式，可选
-10. `write_info_json`：是否输出 `.info.json`
-11. `write_description`：是否输出 `.description`
-12. `write_thumbnail`：是否写出封面图片
-13. `embed_thumbnail`：是否嵌入封面到媒体文件
-14. `cookie_mode`：`none | file | browser`
-15. `cookie_value`：cookie 来源值（文件路径或浏览器名），可选
+Field descriptions:
+1. `url`: video URL, required
+2. `output_dir`: output directory, required
+3. `download_target`: target type, `video | audio | thumbnail`
+4. `format_id`: format ID, optional (effective for `video` only)
+5. `resolution`: resolution, optional (effective for `video` only)
+6. `resolution_mode`: resolution policy, `prefer | limit` (effective for `video` only)
+7. `audio_format`: audio format, optional (effective for `audio` only)
+8. `subtitle_mode`: subtitle mode, `none | manual | auto | all`
+9. `subtitle_langs`: subtitle language expression, optional
+10. `write_info_json`: whether to output `.info.json`
+11. `write_description`: whether to output `.description`
+12. `write_thumbnail`: whether to write thumbnail image
+13. `embed_thumbnail`: whether to embed thumbnail into media file
+14. `cookie_mode`: `none | file | browser`
+15. `cookie_value`: cookie source value (file path or browser name), optional
 
 ### 3.2 DownloadTask
-任务完整结构（列表、创建返回、WebSocket 推送都会用到）。
+Full task structure (used by list response, create response, and WebSocket push).
 
 ```json
 {
@@ -99,7 +99,7 @@
 }
 ```
 
-`status` 可选值：
+`status` allowed values:
 1. `pending`
 2. `running`
 3. `completed`
@@ -107,7 +107,7 @@
 5. `canceled`
 
 ### 3.3 TaskActionResponse
-用于取消/删除/清空等动作接口返回。
+Used by action endpoints such as cancel/delete/clear.
 
 ```json
 {
@@ -116,13 +116,13 @@
 }
 ```
 
-## 4. HTTP 接口
+## 4. HTTP Endpoints
 
-### 4.1 健康说明
+### 4.1 Health
 #### GET `/`
-说明：根路径说明接口，用于确认后端是否运行。
+Description: root hint endpoint to verify backend is running.
 
-响应示例：
+Response example:
 
 ```json
 {
@@ -133,20 +133,20 @@
 
 ---
 
-### 4.2 任务接口（`/api/tasks`）
+### 4.2 Task Endpoints (`/api/tasks`)
 
 #### GET `/api/tasks`
-说明：获取当前内存任务列表（按创建时间倒序）。
+Description: get current in-memory task list (sorted by created time descending).
 
-响应：`DownloadTask[]`
+Response: `DownloadTask[]`
 
 #### POST `/api/tasks`
-说明：创建任务并加入队列。
+Description: create a task and enqueue it.
 
-请求体：`CreateTaskRequest`  
-响应：`DownloadTask`
+Request body: `CreateTaskRequest`  
+Response: `DownloadTask`
 
-失败示例（400）：
+Failure examples (400):
 
 ```json
 {
@@ -161,14 +161,14 @@
 ```
 
 #### POST `/api/tasks/{task_id}/cancel`
-说明：取消任务（仅未结束任务可取消）。
+Description: cancel a task (only unfinished tasks are cancelable).
 
-路径参数：
-1. `task_id`：任务 ID
+Path params:
+1. `task_id`: task ID
 
-响应：`TaskActionResponse`
+Response: `TaskActionResponse`
 
-失败示例（404）：
+Failure example (404):
 
 ```json
 {
@@ -177,14 +177,14 @@
 ```
 
 #### DELETE `/api/tasks/{task_id}`
-说明：删除队列任务（`running` 状态不可直接删除，建议先取消）。
+Description: delete a queued task (`running` tasks cannot be deleted directly; cancel first).
 
-路径参数：
-1. `task_id`：任务 ID
+Path params:
+1. `task_id`: task ID
 
-响应：`TaskActionResponse`
+Response: `TaskActionResponse`
 
-失败示例（404）：
+Failure example (404):
 
 ```json
 {
@@ -194,25 +194,25 @@
 
 ---
 
-### 4.3 历史接口（`/api/history`）
+### 4.3 History Endpoints (`/api/history`)
 
 #### GET `/api/history?limit=200`
-说明：读取 SQLite 历史记录。
+Description: read SQLite history records.
 
-查询参数：
-1. `limit`：返回上限，范围 `1-1000`，默认 `200`
+Query params:
+1. `limit`: max return count, range `1-1000`, default `200`
 
-响应：历史记录数组（结构与 `DownloadTask` 兼容）
+Response: history item array (compatible with `DownloadTask` structure)
 
 #### DELETE `/api/history/{task_id}`
-说明：删除单条历史记录。
+Description: delete one history record.
 
-路径参数：
-1. `task_id`：任务 ID
+Path params:
+1. `task_id`: task ID
 
-响应：`TaskActionResponse`
+Response: `TaskActionResponse`
 
-失败示例（404）：
+Failure example (404):
 
 ```json
 {
@@ -221,11 +221,11 @@
 ```
 
 #### DELETE `/api/history`
-说明：清空全部历史记录。
+Description: clear all history records.
 
-响应：`TaskActionResponse`
+Response: `TaskActionResponse`
 
-响应示例：
+Response example:
 
 ```json
 {
@@ -236,12 +236,12 @@
 
 ---
 
-### 4.4 Cookie 接口（`/api/cookies`）
+### 4.4 Cookie Endpoints (`/api/cookies`)
 
 #### POST `/api/cookies/import`
-说明：校验用户选择的 `cookies.txt` 文件路径是否有效。
+Description: validate whether the selected `cookies.txt` path is valid.
 
-请求体：
+Request body:
 
 ```json
 {
@@ -249,7 +249,7 @@
 }
 ```
 
-响应示例：
+Response example:
 
 ```json
 {
@@ -258,22 +258,22 @@
 }
 ```
 
-失败示例（400）：
+Failure example (400):
 
 ```json
 {
-  "detail": "Cookie 文件不存在或格式非法"
+  "detail": "Cookie file does not exist or has invalid format"
 }
 ```
 
 ---
 
-### 4.5 系统接口（`/api/system`）
+### 4.5 System Endpoints (`/api/system`)
 
 #### GET `/api/system/settings`
-说明：读取应用设置（当前仅包含并发下载数）。
+Description: read app settings (currently includes download concurrency only).
 
-响应示例：
+Response example:
 
 ```json
 {
@@ -285,9 +285,9 @@
 ```
 
 #### PUT `/api/system/settings`
-说明：更新应用设置并立即应用到运行中的下载队列。
+Description: update app settings and apply immediately to running queue workers.
 
-请求体示例：
+Request body example:
 
 ```json
 {
@@ -295,9 +295,9 @@
 }
 ```
 
-响应：同 `GET /api/system/settings`
+Response: same as `GET /api/system/settings`
 
-失败示例（422）：
+Failure example (422):
 
 ```json
 {
@@ -312,9 +312,9 @@
 ```
 
 #### GET `/api/system/dependencies`
-说明：查看本地依赖文件存在性（`yt-dlp` / `ffmpeg`）。
+Description: check local dependency file availability (`yt-dlp` / `ffmpeg`).
 
-响应示例：
+Response example:
 
 ```json
 {
@@ -331,13 +331,13 @@
 }
 ```
 
-字段补充：
-1. `installing`：是否正在下载安装该依赖（启动自动安装或手动更新时为 `true`）
+Field note:
+1. `installing`: whether this dependency is currently being downloaded/installed (`true` during auto-install or manual update)
 
 #### GET `/api/system/yt-dlp/update-status`
-说明：检查 `yt-dlp` 更新状态。
+Description: check `yt-dlp` update status.
 
-响应示例：
+Response example:
 
 ```json
 {
@@ -349,9 +349,9 @@
 ```
 
 #### POST `/api/system/yt-dlp/update`
-说明：一键下载/更新 `yt-dlp`。
+Description: one-click download/update for `yt-dlp`.
 
-响应示例：
+Response example:
 
 ```json
 {
@@ -366,18 +366,18 @@
 }
 ```
 
-失败示例（500）：
+Failure example (500):
 
 ```json
 {
-  "detail": "yt-dlp update failed: 具体错误"
+  "detail": "yt-dlp update failed: specific error"
 }
 ```
 
 #### GET `/api/system/ffmpeg/update-status`
-说明：检查 `ffmpeg` 更新状态。
+Description: check `ffmpeg` update status.
 
-响应示例：
+Response example:
 
 ```json
 {
@@ -392,9 +392,9 @@
 ```
 
 #### POST `/api/system/ffmpeg/update`
-说明：一键下载/更新 `ffmpeg`。
+Description: one-click download/update for `ffmpeg`.
 
-响应示例：
+Response example:
 
 ```json
 {
@@ -412,34 +412,34 @@
 }
 ```
 
-失败示例（500）：
+Failure example (500):
 
 ```json
 {
-  "detail": "ffmpeg update failed: 具体错误"
+  "detail": "ffmpeg update failed: specific error"
 }
 ```
 
-## 5. WebSocket 接口
+## 5. WebSocket Endpoint
 
-### 5.1 任务与终端事件流
+### 5.1 Task and Terminal Event Stream
 #### WS `/ws/tasks`
-说明：统一事件流，前端通过一个连接接收任务状态变化和终端日志输出。
+Description: unified event stream. Frontend receives task state updates and terminal logs via one connection.
 
-事件结构：
+Event structure:
 
 ```json
 {
-  "type": "事件类型",
+  "type": "event_type",
   "data": {}
 }
 ```
 
-事件类型：
-1. `task_update`：任务状态更新，`data` 为 `DownloadTask`
-2. `terminal_output`：终端输出事件，`data` 结构如下
+Event types:
+1. `task_update`: task state update, `data` is `DownloadTask`
+2. `terminal_output`: terminal output event, `data` structure below
 
-`terminal_output` 示例：
+`terminal_output` example:
 
 ```json
 {
@@ -452,53 +452,53 @@
 }
 ```
 
-`stream` 常见值：
-1. `command`：命令或请求动作
-2. `stdout`：标准输出内容
-3. `status`：状态提示
+Common `stream` values:
+1. `command`: command or request action
+2. `stdout`: standard output content
+3. `status`: status hint
 
-## 6. 调用示例（cURL）
+## 6. cURL Examples
 
-### 6.1 创建任务
+### 6.1 Create Task
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/tasks" ^
   -H "Content-Type: application/json" ^
   -d "{\"url\":\"https://www.youtube.com/watch?v=example\",\"output_dir\":\"D:/Downloads\",\"cookie_mode\":\"none\"}"
 ```
 
-### 6.2 取消任务
+### 6.2 Cancel Task
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/tasks/{task_id}/cancel"
 ```
 
-### 6.3 删除队列任务
+### 6.3 Delete Queued Task
 ```bash
 curl -X DELETE "http://127.0.0.1:8000/api/tasks/{task_id}"
 ```
 
-### 6.4 删除单条历史
+### 6.4 Delete One History Item
 ```bash
 curl -X DELETE "http://127.0.0.1:8000/api/history/{task_id}"
 ```
 
-### 6.5 清空历史
+### 6.5 Clear History
 ```bash
 curl -X DELETE "http://127.0.0.1:8000/api/history"
 ```
 
-### 6.6 检查并更新 yt-dlp
+### 6.6 Check and Update yt-dlp
 ```bash
 curl "http://127.0.0.1:8000/api/system/yt-dlp/update-status"
 curl -X POST "http://127.0.0.1:8000/api/system/yt-dlp/update"
 ```
 
-### 6.7 检查并更新 ffmpeg
+### 6.7 Check and Update ffmpeg
 ```bash
 curl "http://127.0.0.1:8000/api/system/ffmpeg/update-status"
 curl -X POST "http://127.0.0.1:8000/api/system/ffmpeg/update"
 ```
 
-### 6.8 读取与更新系统设置
+### 6.8 Read and Update App Settings
 ```bash
 curl "http://127.0.0.1:8000/api/system/settings"
 curl -X PUT "http://127.0.0.1:8000/api/system/settings" ^
@@ -506,12 +506,12 @@ curl -X PUT "http://127.0.0.1:8000/api/system/settings" ^
   -d "{\"download_concurrency\":4}"
 ```
 
-### 6.9 查看依赖安装状态
+### 6.9 Check Dependency Install State
 ```bash
 curl "http://127.0.0.1:8000/api/system/dependencies"
 ```
 
-## 7. 版本与维护建议
-1. 每次新增/修改路由时同步更新本文档。
-2. 若前端提示 `Method Not Allowed / Not Found`，优先检查是否运行了旧版后端进程。
-3. 可用 `GET /openapi.json` 作为运行时接口真值对照。
+## 7. Versioning and Maintenance Tips
+1. Update this document whenever routes are added or changed.
+2. If frontend shows `Method Not Allowed / Not Found`, first check whether an old backend process is still running.
+3. You can use `GET /openapi.json` as runtime truth for API definitions.

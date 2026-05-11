@@ -11,11 +11,21 @@
           <span class="info_value">{{ t("about_project_name_value") }}</span>
         </div>
         <div class="info_row">
+          <span class="info_key">{{ t("about_project_version") }}</span>
+          <span class="info_value">{{ app_version }}</span>
+        </div>
+        <div class="info_row">
+          <span class="info_key">{{ t("about_project_repository") }}</span>
+          <span class="info_value">
+            <a href="#" @click.prevent="open_project_repo">{{ project_repo_url }}</a>
+          </span>
+        </div>
+        <div class="info_row">
           <span class="info_key">{{ t("about_project_goal") }}</span>
           <span class="info_value">{{ t("about_project_goal_value") }}</span>
         </div>
         <div class="info_row">
-          <span class="info_key">{{ t("about_project_repo") }}</span>
+          <span class="info_key">{{ t("about_project_upstream") }}</span>
           <span class="info_value">
             <a href="#" @click.prevent="open_ytdlp_repo">{{ t("about_project_repo_link") }}</a>
           </span>
@@ -65,21 +75,31 @@
 import { t } from "@/i18n/strings";
 
 const yt_dlp_repo_url = "https://github.com/yt-dlp/yt-dlp";
+const project_repo_url = "https://github.com/YueHengMusic/YoutubeDownloader";
+const app_version = "1.0.0";
 const current_year = new Date().getFullYear();
 
-async function open_ytdlp_repo() {
+async function open_external_url(url: string) {
   /**
    * 优先通过 Electron 主进程打开系统默认浏览器；
    * 浏览器调试场景下回退到 window.open，保证链接可用。
    */
   try {
-    const ok = await window.desktopAPI?.openExternalUrl?.(yt_dlp_repo_url);
+    const ok = await window.desktopAPI?.openExternalUrl?.(url);
     if (ok) return;
   } catch {
     // ignore
   }
-  const popup_window = window.open(yt_dlp_repo_url, "_blank", "noopener,noreferrer");
-  if (!popup_window) window.location.href = yt_dlp_repo_url;
+  const popup_window = window.open(url, "_blank", "noopener,noreferrer");
+  if (!popup_window) window.location.href = url;
+}
+
+async function open_project_repo() {
+  await open_external_url(project_repo_url);
+}
+
+async function open_ytdlp_repo() {
+  await open_external_url(yt_dlp_repo_url);
 }
 </script>
 

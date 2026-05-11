@@ -1,16 +1,26 @@
 # YouTubeDownloader（yt-dlp GUI 桌面版）
 
 这是一个基于 `Electron + Vue3 + FastAPI` 的桌面应用，目标是把 `yt-dlp` 的命令行能力做成图形界面，方便新手使用。
+当前版本仅计划适配 Windows 平台。
 
 ## 你会得到什么
 - 图形化创建下载任务（链接、格式、分辨率、Cookie）
+- 下载页支持“简单/高级”模式切换（简单模式更适合新手）
 - 下载队列与实时状态
 - 日志页面（统一查看终端命令与输出）
 - 历史记录（本地 SQLite）
-- 关于页面（项目说明、作者联系方式、上游仓库链接）
+- 关于页面（项目说明、项目版本、项目仓库、作者联系方式、上游仓库链接）
 - `yt-dlp` 自动下载/更新（GitHub Release）
 - `ffmpeg` 自动下载/更新（GitHub Release）
-- 跨平台打包能力（Windows/macOS/Linux）
+- Windows 桌面打包能力（NSIS 安装包）
+
+## 依赖自动处理与任务禁用说明
+- 应用启动时会自动检测本地 `yt-dlp` / `ffmpeg` 是否存在。
+- 若缺失，后端会自动后台下载安装（可在“日志”页查看输出）。
+- 下载页“添加任务”按钮在以下场景会自动禁用并显示引导提示：
+  - 依赖未安装
+  - 依赖正在下载安装（未安装完成）
+- 当依赖未就绪时，可跳转“设置”页手动点击下载/更新。
 
 ## 技术结构（简版）
 - `desktop/`：Electron 主进程，负责窗口与本地系统能力（文件选择、启动后端）
@@ -62,19 +72,17 @@ npm run dev:electron
 3. 再运行 `npm run dev:electron`
 4. 打开 Electron 控制台看是否有 `ERR_FILE_NOT_FOUND`
 
-## 打包命令
-- 当前平台安装包：`npm run dist`
-- 指定平台：
-  - `npm run dist:win`
-  - `npm run dist:mac`
-  - `npm run dist:linux`
+## 打包命令（Windows）
+- Windows 安装包：`npm run dist:win`
+- 当前平台安装包（在 Windows 上等同打 Windows 包）：`npm run dist`
 - 仅生成目录（调试打包用）：`npm run pack`
-- 图标一键生成（`svg -> png/ico/icns`）：`npm run generate:icons`
+- 图标一键生成（`svg -> png/ico`）：`npm run generate:icons`
 
-> `electron-builder` 已配置把 `resources/bin/{windows,macos,linux}` 与 `resources/icons` 自动映射到安装包内，并使用：
-> - Windows：`resources/icons/app_icon.ico`
-> - macOS：`resources/icons/app_icon.icns`
-> - Linux：`resources/icons/app_icon.png`
+> 当前发布目标为 Windows，建议优先使用 `npm run dist:win`。
 
 ## 详细命令手册
 - 见 `docs/命令手册.md`（含更多启动、构建、打包、排错命令）。
+
+## 接口文档
+- 中文：`docs/接口文档.md`
+- 英文：`docs/API-Documentation.en.md`

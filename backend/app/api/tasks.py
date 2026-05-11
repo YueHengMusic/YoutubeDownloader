@@ -1,0 +1,37 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException
+
+from app.models.task import CreateTaskRequest, DownloadTask, TaskActionResponse
+import app.state as state_module
+
+router = APIRouter(prefix="/api/tasks", tags=["tasks"])
+
+
+@router.get("")
+async def list_tasks() -> list[DownloadTask]:
+    """返回内存中的任务列表（按创建时间倒序）。"""
+    if state_module.app_state is None:
+        raise HTTPException(status_code=503, detail="App state not initialized")
+    return state_module.app_state.queue_manager.list_tasks()
+
+
+@router.post("")
+async def create_task(payload: CreateTaskRequest) -> DownloadTask:
+    """创建下载任务并加入队列。"""
+    if state_module.app_state is None:
+        raise HTTPException(status_code=503, detail="App state not initialized")
+    task = DownloadTask(**payload.model_dump())
+    await state_module.app_state.queue_manager.add_task(task)
+    return task
+
+
+@router.post("/{task_id}/cancel")
+async def cancel_task(task_id: str) -> TaskActionResponse:
+    """尽力取消任务：只要任务还没结束，就会标记为 canceled。"""
+    if state_module.app_state is None:
+        raise HTTPException(status_code=503, detail="App state not initialized")
+    ok = await state_module.app_state.queue_manager.cancel_task(task_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Task not found or not cancelable")
+    return TaskActionResponse(ok=True, message="Task canceled")

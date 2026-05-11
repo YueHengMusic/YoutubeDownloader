@@ -1,0 +1,59 @@
+# =========================
+# Node / Frontend / Electron
+# =========================
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# 构建产物（可随时重新构建）
+dist/
+frontend/dist/
+release/
+
+# =========================
+# Python / Backend
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Python 虚拟环境
+.venv/
+venv/
+env/
+
+# 后端本地数据（运行时生成）
+backend/data/
+
+# =========================
+# IDE / OS 临时文件
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.trae/
+
+# =========================
+# 本地下载的二进制（体积大）
+# 保留目录结构和说明文件
+# =========================
+resources/bin/windows/*
+resources/bin/macos/*
+resources/bin/linux/*
+!resources/bin/windows/.gitkeep
+!resources/bin/macos/.gitkeep
+!resources/bin/linux/.gitkeep
+!resources/bin/README.txt
+
+# =========================
+# 第三方源码（用于本地学习，不建议提交）
+# =========================
+third_party/

@@ -140,7 +140,9 @@ function startBackend(): void {
     ["-m", "uvicorn", "app.main:app", "--host", BACKEND_HOST, "--port", BACKEND_PORT, "--app-dir", backendRoot],
     {
       cwd: backendRoot,
-      stdio: "inherit"
+      // 桌面端应静默拉起后端，避免 Windows 弹出空白 cmd 窗口。
+      stdio: "ignore",
+      windowsHide: true
     }
   );
 }

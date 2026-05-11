@@ -1,6 +1,8 @@
 {
   "name": "yt-dlp-desktop",
   "version": "1.0.0",
+  "description": "Windows desktop GUI for yt-dlp",
+  "author": "YueHengMusic",
   "private": true,
   "main": "dist/desktop/main.js",
   "scripts": {
@@ -42,6 +44,7 @@
   "build": {
     "appId": "com.yueh.ytdlpgui",
     "productName": "YtDlpGui",
+    "copyright": "Copyright © 2026 YueHengMusic",
     "icon": "resources/icons/app_icon.png",
     "directories": {
       "output": "release"
@@ -77,6 +80,8 @@
     ],
     "win": {
       "icon": "resources/icons/app_icon.ico",
+      "publisherName": "YueHengMusic",
+      "legalTrademarks": "YtDlpGui and related marks are trademarks of YueHengMusic.",
       "target": [
         "nsis"
       ],

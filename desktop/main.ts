@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "node:path";
 import { spawn, ChildProcess } from "node:child_process";
 import fs from "node:fs";
@@ -138,4 +138,16 @@ ipcMain.handle("dialog:pick-cookie", async () => {
     filters: [{ name: "Text", extensions: ["txt"] }]
   });
   return result.canceled ? null : result.filePaths[0];
+});
+
+// IPC：使用系统默认浏览器打开外部链接（而不是在 Electron 内部窗口打开）。
+ipcMain.handle("shell:open-external-url", async (_event, rawUrl: string) => {
+  // 最基础安全校验：仅允许 http/https，避免误传其他协议。
+  if (typeof rawUrl !== "string") return false;
+  const safeUrl = rawUrl.trim();
+  if (!safeUrl.startsWith("http://") && !safeUrl.startsWith("https://")) {
+    return false;
+  }
+  await shell.openExternal(safeUrl);
+  return true;
 });

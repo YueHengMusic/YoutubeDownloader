@@ -33,6 +33,9 @@
             <button class="btn-secondary" @click="cancel(task.id)" :disabled="task.status !== 'running' && task.status !== 'pending'">
               {{ t("queue_action_cancel") }}
             </button>
+            <button class="btn-secondary danger" @click="removeTask(task.id)" :disabled="task.status === 'running'">
+              {{ t("queue_action_delete") }}
+            </button>
           </td>
         </tr>
       </tbody>
@@ -57,6 +60,10 @@ onMounted(() => {
 
 async function cancel(taskId: string) {
   await store.cancelTask(taskId);
+}
+
+async function removeTask(taskId: string) {
+  await store.deleteTask(taskId);
 }
 
 async function refresh() {
@@ -120,6 +127,10 @@ thead th {
   background: var(--canvas);
   color: var(--ink);
   cursor: pointer;
+}
+
+.danger {
+  margin-left: 8px;
 }
 
 .btn-secondary:disabled {

@@ -10,6 +10,8 @@ declare global {
       pickDirectory?: () => Promise<string | null>;
       // 选择 cookies.txt：用于登录态下载。
       pickCookieFile?: () => Promise<string | null>;
+      // 使用系统默认浏览器打开外部链接。
+      openExternalUrl?: (url: string) => Promise<boolean>;
     };
   }
 }

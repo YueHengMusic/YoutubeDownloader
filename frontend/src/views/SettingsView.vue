@@ -8,7 +8,12 @@
       <div class="info_list">
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_installed_version") }}</span>
-          <span class="info_value">{{ store.ytDlpStatus?.installed_version || t("common_not_installed") }}</span>
+          <span class="info_value">
+            {{
+              store.ytDlpStatus?.installed_version
+                || (store.dependencyStatus?.yt_dlp.exists ? t("settings_installed_unchecked") : t("common_not_installed"))
+            }}
+          </span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_latest_version") }}</span>
@@ -16,11 +21,17 @@
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_need_update") }}</span>
-          <span class="info_value">{{ store.ytDlpStatus?.has_update ? t("common_yes") : t("common_no") }}</span>
+          <span class="info_value">
+            {{
+              store.ytDlpStatus == null
+                ? t("common_dash")
+                : (store.ytDlpStatus.has_update ? t("common_yes") : t("common_no"))
+            }}
+          </span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_binary_path") }}</span>
-          <span class="info_value long">{{ store.ytDlpStatus?.binary_path || t("common_dash") }}</span>
+          <span class="info_value long">{{ store.ytDlpStatus?.binary_path || store.dependencyStatus?.yt_dlp.path || t("common_dash") }}</span>
         </div>
       </div>
       <div class="row">
@@ -38,7 +49,12 @@
       <div class="info_list">
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_installed_version") }}</span>
-          <span class="info_value">{{ store.ffmpegStatus?.installed_version || t("common_not_installed") }}</span>
+          <span class="info_value">
+            {{
+              store.ffmpegStatus?.installed_version
+                || (store.dependencyStatus?.ffmpeg.exists ? t("settings_installed_unchecked") : t("common_not_installed"))
+            }}
+          </span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_latest_release_id") }}</span>
@@ -54,11 +70,17 @@
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_need_update") }}</span>
-          <span class="info_value">{{ store.ffmpegStatus?.has_update ? t("common_yes") : t("common_no") }}</span>
+          <span class="info_value">
+            {{
+              store.ffmpegStatus == null
+                ? t("common_dash")
+                : (store.ffmpegStatus.has_update ? t("common_yes") : t("common_no"))
+            }}
+          </span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_binary_path") }}</span>
-          <span class="info_value long">{{ store.ffmpegStatus?.binary_path || t("common_dash") }}</span>
+          <span class="info_value long">{{ store.ffmpegStatus?.binary_path || store.dependencyStatus?.ffmpeg.path || t("common_dash") }}</span>
         </div>
       </div>
       <div class="row">
@@ -85,9 +107,8 @@ const backendUrl = "http://127.0.0.1:8000";
 const store = useTaskStore();
 
 onMounted(async () => {
-  // 页面加载时同步拉取两个依赖的状态，用户打开就能看见结果。
-  await store.refreshYtDlpStatus();
-  await store.refreshFfmpegStatus();
+  // 进入设置页时仅做本地依赖存在性检查，不触发远程版本检测。
+  await store.refreshDependencyStatus();
 });
 
 async function checkYtDlp() {

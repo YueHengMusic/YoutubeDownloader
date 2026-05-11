@@ -2,9 +2,14 @@
   <section class="section">
     <div class="head">
       <h2>{{ t("history_title") }}</h2>
-      <button class="btn-secondary" @click="store.refreshHistory" :disabled="store.isRefreshingHistory">
-        {{ store.isRefreshingHistory ? t("common_refreshing") : t("common_refresh") }}
-      </button>
+      <div class="actions">
+        <button class="btn-secondary" @click="store.refreshHistory" :disabled="store.isRefreshingHistory">
+          {{ store.isRefreshingHistory ? t("common_refreshing") : t("common_refresh") }}
+        </button>
+        <button class="btn-secondary" @click="store.clearHistory" :disabled="store.history.length === 0">
+          {{ t("history_action_clear_all") }}
+        </button>
+      </div>
     </div>
 
     <UiLoadingRows v-if="store.isRefreshingHistory && store.history.length === 0" :rows="4" />
@@ -19,7 +24,12 @@
       <article class="item" v-for="item in store.history" :key="item.id">
         <div class="row">
           <UiStatusTag :status="item.status" />
-          <span class="time">{{ item.updated_at }}</span>
+          <div class="meta">
+            <span class="time">{{ item.updated_at }}</span>
+            <button class="btn-secondary btn-sm" @click="store.deleteHistoryItem(item.id)">
+              {{ t("history_action_delete") }}
+            </button>
+          </div>
         </div>
         <p class="url">{{ item.url }}</p>
       </article>
@@ -55,6 +65,12 @@ onMounted(() => {
   justify-content: space-between;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 h2 {
   margin: 0;
   font-size: 24px;
@@ -80,6 +96,12 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .time {
@@ -108,5 +130,10 @@ h2 {
   border-color: var(--hairline);
   color: var(--mute);
   cursor: not-allowed;
+}
+
+.btn-sm {
+  height: 30px;
+  padding: 0 12px;
 }
 </style>

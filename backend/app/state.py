@@ -48,6 +48,9 @@ def init_state() -> AppState:
     runner = YtDlpRunner(
         yt_dlp_path=binary_locator.get_yt_dlp_path(),
         ffmpeg_path=binary_locator.get_ffmpeg_path(),
+        terminal_callback=lambda payload: event_bus.publish(
+            {"type": "terminal_output", "data": payload}
+        ),
     )
 
     async def on_update(task: DownloadTask) -> None:

@@ -10,12 +10,20 @@ from app.core.cookie_manager import CookieManager
 from app.models.task import DownloadTask, TaskStatus
 
 ProgressCallback = Callable[[DownloadTask], Awaitable[None]]
+TerminalCallback = Callable[[dict], Awaitable[None]]
 
 
 class YtDlpRunner:
-    def __init__(self, yt_dlp_path: Path, ffmpeg_path: Path) -> None:
+    def __init__(
+        self,
+        yt_dlp_path: Path,
+        ffmpeg_path: Path,
+        terminal_callback: TerminalCallback | None = None,
+    ) -> None:
         self.yt_dlp_path = yt_dlp_path
         self.ffmpeg_path = ffmpeg_path
+        # 终端日志回调由上层注入（通常是事件总线广播），这样运行器不直接依赖具体传输实现。
+        self.terminal_callback = terminal_callback
 
     def build_command(self, task: DownloadTask) -> list[str]:
         """把任务字段翻译成一条可执行的 yt-dlp 命令。"""
@@ -43,6 +51,14 @@ class YtDlpRunner:
         执行一次 yt-dlp 子进程，并持续把进度回调给上层。
         """
         command = self.build_command(task)
+        # 任务开始时先广播“完整命令行”，方便前端终端面板看到本次实际执行了什么。
+        await self._emit_terminal_event(
+            {
+                "stream": "command",
+                "task_id": task.id,
+                "text": " ".join(command),
+            }
+        )
         task.status = TaskStatus.running
         task.updated_at = datetime.utcnow()
         await callback(task)
@@ -59,11 +75,26 @@ class YtDlpRunner:
             text = line.decode("utf-8", errors="ignore").strip()
             if not text:
                 continue
+            # 持续广播 stdout 行，让前端可以实时渲染“正在执行中的终端输出”。
+            await self._emit_terminal_event(
+                {
+                    "stream": "stdout",
+                    "task_id": task.id,
+                    "text": text,
+                }
+            )
             self._parse_line(task, text)
             task.updated_at = datetime.utcnow()
             await callback(task)
 
         return_code = await process.wait()
+        await self._emit_terminal_event(
+            {
+                "stream": "status",
+                "task_id": task.id,
+                "text": f"yt-dlp exited with code {return_code}",
+            }
+        )
         if return_code == 0:
             task.status = TaskStatus.completed
             task.progress = 100.0
@@ -73,6 +104,19 @@ class YtDlpRunner:
                 task.error = f"yt-dlp exited with code {return_code}"
         task.updated_at = datetime.utcnow()
         await callback(task)
+
+    async def _emit_terminal_event(self, payload: dict) -> None:
+        """
+        统一终端事件出口：
+        - 若上层未注入回调，则直接跳过，不影响核心下载流程。
+        - 捕获并吞掉回调异常，避免“仅日志通道故障”导致下载任务失败。
+        """
+        if self.terminal_callback is None:
+            return
+        try:
+            await self.terminal_callback(payload)
+        except Exception:
+            return
 
     def _parse_line(self, task: DownloadTask, text: str) -> None:
         """从 yt-dlp 输出文本中解析进度、结果路径等关键字段。"""

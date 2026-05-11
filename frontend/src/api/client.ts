@@ -35,6 +35,17 @@ export type FfmpegUpdateStatus = {
   binary_path: string;
 };
 
+export type DependencyStatus = {
+  yt_dlp: {
+    path: string;
+    exists: boolean;
+  };
+  ffmpeg: {
+    path: string;
+    exists: boolean;
+  };
+};
+
 // 下载任务实时进度 websocket 连接入口。
 export function connectTaskWs(onMessage: (data: any) => void): WebSocket {
   const ws = new WebSocket("ws://127.0.0.1:8000/ws/tasks");
@@ -65,5 +76,10 @@ export async function fetchFfmpegUpdateStatus(): Promise<FfmpegUpdateStatus> {
 
 export async function triggerFfmpegUpdate(): Promise<Record<string, unknown>> {
   const { data } = await apiClient.post<Record<string, unknown>>("/api/system/ffmpeg/update");
+  return data;
+}
+
+export async function fetchDependencyStatus(): Promise<DependencyStatus> {
+  const { data } = await apiClient.get<DependencyStatus>("/api/system/dependencies");
   return data;
 }

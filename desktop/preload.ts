@@ -10,5 +10,9 @@ contextBridge.exposeInMainWorld("desktopAPI", {
   // 让用户选择 cookies.txt 文件。
   pickCookieFile: async (): Promise<string | null> => {
     return ipcRenderer.invoke("dialog:pick-cookie");
+  },
+  // 使用系统默认浏览器打开外部链接（例如插件商店地址）。
+  openExternalUrl: async (url: string): Promise<boolean> => {
+    return ipcRenderer.invoke("shell:open-external-url", url);
   }
 });

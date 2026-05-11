@@ -99,3 +99,17 @@ class HistoryRepository:
             "updated_at",
         ]
         return [dict(zip(keys, row, strict=False)) for row in rows]
+
+    def delete_history_item(self, task_id: str) -> bool:
+        """按任务 ID 删除一条历史记录，成功返回 True。"""
+        with self._connect() as conn:
+            cursor = conn.execute("DELETE FROM history WHERE id = ?", (task_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def clear_history(self) -> int:
+        """清空全部历史记录，返回删除条数。"""
+        with self._connect() as conn:
+            cursor = conn.execute("DELETE FROM history")
+            conn.commit()
+            return int(cursor.rowcount or 0)

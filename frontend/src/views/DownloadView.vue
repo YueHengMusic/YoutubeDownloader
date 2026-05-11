@@ -19,7 +19,19 @@
       <label>{{ t("download_label_resolution") }}</label>
       <input v-model="resolution" :placeholder="t('download_placeholder_resolution')" />
 
-      <label>{{ t("download_label_cookie_mode") }}</label>
+      <div class="label_with_tip">
+        <label>{{ t("download_label_cookie_mode") }}</label>
+        <button class="tip_toggle" type="button" @click="showCookieTip = !showCookieTip">
+          {{ t("download_cookie_tip_toggle") }}
+        </button>
+      </div>
+      <div v-if="showCookieTip" class="tip_card">
+        <span>{{ t("download_cookie_tip_text_prefix") }}</span>
+        <a href="#" @click.prevent="openCookieHelperLink">
+          {{ t("download_cookie_tip_link_text") }}
+        </a>
+        <span>{{ t("download_cookie_tip_text_suffix") }}</span>
+      </div>
       <UiSelect v-model="cookieMode" :options="cookie_mode_options" />
 
       <div v-if="cookieMode === 'file'" class="row">
@@ -107,6 +119,8 @@ const formatId = ref(initialDraft.formatId);
 const resolution = ref(initialDraft.resolution);
 const cookieMode = ref<CookieMode>(initialDraft.cookieMode);
 const cookieValue = ref(initialDraft.cookieValue);
+const showCookieTip = ref(false);
+const cookie_helper_url = "https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc";
 const cookie_mode_options = computed<UiSelectOption[]>(() => [
   { value: "none", label: t("download_cookie_mode_none") },
   { value: "file", label: t("download_cookie_mode_file") },
@@ -149,6 +163,24 @@ async function pickCookie() {
   if (path) {
     cookieValue.value = path;
     await store.importCookie(path);
+  }
+}
+
+async function openCookieHelperLink() {
+  /**
+   * 优先走 Electron 主进程调用 shell.openExternal，以便使用系统默认浏览器。
+   * 如果当前不是桌面环境（例如纯浏览器调试），则降级使用 window.open。
+   */
+  try {
+    const ok = await window.desktopAPI?.openExternalUrl?.(cookie_helper_url);
+    if (ok) return;
+  } catch {
+    // ignore: 可能是旧版 Electron 主进程未注册 IPC，走下方降级方案。
+  }
+  const popupWindow = window.open(cookie_helper_url, "_blank", "noopener,noreferrer");
+  if (!popupWindow) {
+    // 再兜底：至少保证链接可访问（即便不是默认浏览器路径）。
+    window.location.href = cookie_helper_url;
   }
 }
 
@@ -216,6 +248,43 @@ label {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.label_with_tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tip_toggle {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 9999px;
+  background: var(--canvas);
+  color: var(--body);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tip_card {
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--body);
+  line-height: 1.5;
+}
+
+.tip_card a {
+  color: var(--ink);
+  text-decoration: underline;
 }
 
 input {

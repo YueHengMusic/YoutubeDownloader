@@ -58,6 +58,21 @@ class QueueManager:
         await self.on_update(task)
         return True
 
+    def remove_task(self, task_id: str) -> bool:
+        """
+        从内存队列中删除任务。
+        规则：
+        - running 任务不允许直接删除，避免和正在执行的 worker 冲突；
+        - pending/completed/failed/canceled 允许删除。
+        """
+        task = self.tasks.get(task_id)
+        if task is None:
+            return False
+        if task.status == TaskStatus.running:
+            return False
+        del self.tasks[task_id]
+        return True
+
     def list_tasks(self) -> list[DownloadTask]:
         """返回稳定排序结果，避免前端列表闪烁。"""
         return sorted(self.tasks.values(), key=lambda item: item.created_at, reverse=True)

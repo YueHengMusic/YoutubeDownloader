@@ -9,6 +9,7 @@ import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 from urllib.request import Request, urlopen
 
 
@@ -53,14 +54,29 @@ class FfmpegUpdater:
         self.platform_folder = platform_folder
         self.meta_path = ffmpeg_path.with_suffix(ffmpeg_path.suffix + ".release.json")
 
-    def get_installed_version(self) -> str | None:
+    def _emit_terminal_event(self, terminal_callback: Callable[[dict], None] | None, stream: str, text: str) -> None:
+        """
+        统一终端输出入口：
+        - 把检查/更新中的执行步骤持续写入同一条终端流；
+        - 回调异常不影响更新器主逻辑，保证业务稳定性。
+        """
+        if terminal_callback is None:
+            return
+        try:
+            terminal_callback({"stream": stream, "text": text})
+        except Exception:  # noqa: BLE001
+            return
+
+    def get_installed_version(self, terminal_callback: Callable[[dict], None] | None = None) -> str | None:
         """
         通过执行 `ffmpeg -version` 读取本地版本。
         成功返回第一行（例如 `ffmpeg version ...`），失败返回 None。
         """
         if not self.ffmpeg_path.exists():
+            self._emit_terminal_event(terminal_callback, "status", "ffmpeg binary not found, installed version = None")
             return None
         try:
+            self._emit_terminal_event(terminal_callback, "command", f"{self.ffmpeg_path} -version")
             result = subprocess.run(
                 [str(self.ffmpeg_path), "-version"],
                 check=True,
@@ -68,8 +84,11 @@ class FfmpegUpdater:
                 text=True,
             )
             first_line = result.stdout.splitlines()[0] if result.stdout else ""
-            return first_line.strip() or None
-        except Exception:  # noqa: BLE001
+            version = first_line.strip() or None
+            self._emit_terminal_event(terminal_callback, "stdout", f"ffmpeg version: {version or 'unknown'}")
+            return version
+        except Exception as exc:  # noqa: BLE001
+            self._emit_terminal_event(terminal_callback, "status", f"failed to get ffmpeg version: {exc}")
             return None
 
     def _read_local_meta(self) -> dict | None:
@@ -90,10 +109,11 @@ class FfmpegUpdater:
         self.meta_path.parent.mkdir(parents=True, exist_ok=True)
         self.meta_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def fetch_latest_release(self) -> FfmpegReleaseInfo:
+    def fetch_latest_release(self, terminal_callback: Callable[[dict], None] | None = None) -> FfmpegReleaseInfo:
         """
         从 GitHub API 拉取 FFmpeg-Builds 最新发布信息。
         """
+        self._emit_terminal_event(terminal_callback, "command", f"GET {FFMPEG_RELEASE_API}")
         request = Request(
             FFMPEG_RELEASE_API,
             headers={
@@ -148,16 +168,23 @@ class FfmpegUpdater:
 
         raise RuntimeError(f"未找到适用于当前平台({self.platform_folder})的 FFmpeg 资产。可选项: {asset_names}")
 
-    def _extract_archive(self, archive_path: Path, target_temp_dir: Path) -> None:
+    def _extract_archive(
+        self,
+        archive_path: Path,
+        target_temp_dir: Path,
+        terminal_callback: Callable[[dict], None] | None = None,
+    ) -> None:
         """
         解压下载的压缩包到临时目录。
         """
         if archive_path.suffix == ".zip":
+            self._emit_terminal_event(terminal_callback, "status", f"extract zip archive: {archive_path.name}")
             with zipfile.ZipFile(archive_path, "r") as zf:
                 zf.extractall(target_temp_dir)
             return
 
         if archive_path.name.endswith(".tar.xz"):
+            self._emit_terminal_event(terminal_callback, "status", f"extract tar.xz archive: {archive_path.name}")
             with tarfile.open(archive_path, mode="r:xz") as tf:
                 tf.extractall(target_temp_dir)
             return
@@ -174,7 +201,11 @@ class FfmpegUpdater:
                 return candidate
         raise RuntimeError("解压后未找到 ffmpeg 可执行文件")
 
-    def download_latest(self, release: FfmpegReleaseInfo | None = None) -> dict[str, str]:
+    def download_latest(
+        self,
+        release: FfmpegReleaseInfo | None = None,
+        terminal_callback: Callable[[dict], None] | None = None,
+    ) -> dict[str, str]:
         """
         下载并安装最新 FFmpeg：
         1) 下载压缩包到临时目录；
@@ -182,8 +213,9 @@ class FfmpegUpdater:
         3) 覆盖到目标路径；
         4) 写入本地 release 元信息。
         """
-        latest = release or self.fetch_latest_release()
+        latest = release or self.fetch_latest_release(terminal_callback)
         asset = self.pick_asset(latest)
+        self._emit_terminal_event(terminal_callback, "status", f"selected ffmpeg asset: {asset.name}")
 
         self.ffmpeg_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -191,21 +223,30 @@ class FfmpegUpdater:
             temp_dir = Path(temp_dir_str)
             archive_path = temp_dir / asset.name
 
+            self._emit_terminal_event(terminal_callback, "command", f"GET {asset.download_url}")
             request = Request(asset.download_url, headers={"User-Agent": "yt-dlp-gui-desktop"})
             with urlopen(request, timeout=120) as response:  # noqa: S310 - 固定可信来源
-                archive_path.write_bytes(response.read())
+                payload = response.read()
+                archive_path.write_bytes(payload)
+            self._emit_terminal_event(terminal_callback, "stdout", f"downloaded ffmpeg bytes: {len(payload)}")
 
             extract_dir = temp_dir / "extract"
             extract_dir.mkdir(parents=True, exist_ok=True)
-            self._extract_archive(archive_path, extract_dir)
+            self._extract_archive(archive_path, extract_dir, terminal_callback)
 
             source_binary = self._locate_ffmpeg_binary(extract_dir)
             shutil.copy2(source_binary, self.ffmpeg_path)
+            self._emit_terminal_event(terminal_callback, "stdout", f"ffmpeg binary copied to: {self.ffmpeg_path}")
 
         # 非 Windows 平台要给执行权限，否则会出现“权限不足无法执行”。
         if os.name != "nt":
             current_mode = os.stat(self.ffmpeg_path).st_mode
             os.chmod(self.ffmpeg_path, current_mode | 0o111)
+            self._emit_terminal_event(
+                terminal_callback,
+                "stdout",
+                "applied executable permission for ffmpeg binary",
+            )
 
         self._write_local_meta(
             {
@@ -222,15 +263,19 @@ class FfmpegUpdater:
             "path": str(self.ffmpeg_path),
         }
 
-    def check_update_status(self) -> dict[str, str | bool | int | None]:
+    def check_update_status(
+        self,
+        terminal_callback: Callable[[dict], None] | None = None,
+    ) -> dict[str, str | bool | int | None]:
         """
         检查本地 FFmpeg 是否落后于最新发布。
         判定逻辑：
         - 若没有本地 release 元信息，且本地存在 ffmpeg，则给出“可能需要更新”；
         - 若有元信息，则比较 release_id。
         """
-        latest = self.fetch_latest_release()
-        installed_version = self.get_installed_version()
+        self._emit_terminal_event(terminal_callback, "status", "checking ffmpeg update status...")
+        latest = self.fetch_latest_release(terminal_callback)
+        installed_version = self.get_installed_version(terminal_callback)
         local_meta = self._read_local_meta()
         local_release_id = int(local_meta["release_id"]) if local_meta and "release_id" in local_meta else None
 
@@ -238,6 +283,12 @@ class FfmpegUpdater:
             has_update = installed_version is None or True
         else:
             has_update = local_release_id != latest.release_id
+
+        self._emit_terminal_event(
+            terminal_callback,
+            "status",
+            f"ffmpeg has_update={has_update} (local_release_id={local_release_id}, latest_release_id={latest.release_id})",
+        )
 
         return {
             "installed_version": installed_version,
@@ -249,12 +300,18 @@ class FfmpegUpdater:
             "binary_path": str(self.ffmpeg_path),
         }
 
-    def ensure_latest(self) -> dict[str, str | bool | int | None]:
+    def ensure_latest(
+        self,
+        terminal_callback: Callable[[dict], None] | None = None,
+    ) -> dict[str, str | bool | int | None]:
         """
         一键更新入口：若需要更新则下载，否则返回当前状态。
         """
-        status = self.check_update_status()
+        self._emit_terminal_event(terminal_callback, "status", "start ensure latest ffmpeg")
+        status = self.check_update_status(terminal_callback)
         if status["has_update"] is True:
-            result = self.download_latest()
+            result = self.download_latest(terminal_callback=terminal_callback)
+            self._emit_terminal_event(terminal_callback, "status", "ffmpeg update completed")
             return {**status, **result, "updated": True}
+        self._emit_terminal_event(terminal_callback, "status", "ffmpeg already latest, skip download")
         return {**status, "updated": False}

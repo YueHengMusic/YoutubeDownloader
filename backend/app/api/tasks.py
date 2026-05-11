@@ -35,3 +35,14 @@ async def cancel_task(task_id: str) -> TaskActionResponse:
     if not ok:
         raise HTTPException(status_code=404, detail="Task not found or not cancelable")
     return TaskActionResponse(ok=True, message="Task canceled")
+
+
+@router.delete("/{task_id}")
+async def delete_task(task_id: str) -> TaskActionResponse:
+    """删除队列任务（运行中任务不可删除，请先取消）。"""
+    if state_module.app_state is None:
+        raise HTTPException(status_code=503, detail="App state not initialized")
+    ok = state_module.app_state.queue_manager.remove_task(task_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Task not found or running")
+    return TaskActionResponse(ok=True, message="Task deleted")

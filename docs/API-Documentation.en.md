@@ -161,7 +161,7 @@ Failure examples (400):
 ```
 
 #### POST `/api/tasks/{task_id}/cancel`
-Description: cancel a task (only unfinished tasks are cancelable).
+Description: cancel a task (only unfinished tasks are cancelable). The backend attempts to terminate the related download process (and process tree on Windows), then marks the task as `canceled`.
 
 Path params:
 1. `task_id`: task ID

@@ -70,6 +70,7 @@ def init_state() -> AppState:
     queue_manager = QueueManager(
         runner=runner.run,
         on_update=on_update,
+        cancel_runner=runner.cancel,
         concurrency=settings_repo.get_download_concurrency(),
     )
     return AppState(

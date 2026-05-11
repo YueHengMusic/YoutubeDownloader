@@ -16,9 +16,16 @@ class QueueManager:
     适合桌面端单机场景，逻辑直观，易于排查问题。
     """
 
-    def __init__(self, runner: TaskRunFunc, on_update: TaskUpdateCallback, concurrency: int = 2) -> None:
+    def __init__(
+        self,
+        runner: TaskRunFunc,
+        on_update: TaskUpdateCallback,
+        cancel_runner: Callable[[str], Awaitable[None]] | None = None,
+        concurrency: int = 2,
+    ) -> None:
         self.runner = runner
         self.on_update = on_update
+        self.cancel_runner = cancel_runner
         self.concurrency = max(1, int(concurrency))
         self.tasks: dict[str, DownloadTask] = {}
         # waiting 队列支持 str/None：
@@ -79,6 +86,8 @@ class QueueManager:
             return False
         if task.status in (TaskStatus.completed, TaskStatus.failed, TaskStatus.canceled):
             return False
+        if self.cancel_runner is not None:
+            await self.cancel_runner(task_id)
         task.status = TaskStatus.canceled
         task.updated_at = datetime.utcnow()
         await self.on_update(task)

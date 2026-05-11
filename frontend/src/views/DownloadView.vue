@@ -355,6 +355,10 @@ watch(cookieMode, (mode) => {
   if (mode === "browser" && cookieValue.value !== "chrome" && cookieValue.value !== "edge") {
     cookieValue.value = "edge";
   }
+  // 切到文件模式时，清理浏览器名称残留，避免输入框出现 edge/chrome 误导用户。
+  if (mode === "file" && (cookieValue.value === "chrome" || cookieValue.value === "edge")) {
+    cookieValue.value = "";
+  }
   if (mode === "none") {
     cookieValue.value = "";
   }

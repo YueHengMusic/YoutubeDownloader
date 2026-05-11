@@ -7,6 +7,7 @@ export type UiTask = {
   eta?: string;
   log: string;
   error?: string;
+  result_path?: string;
   output_dir: string;
   updated_at: string;
 };

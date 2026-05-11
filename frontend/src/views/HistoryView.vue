@@ -26,8 +26,16 @@
           <UiStatusTag :status="item.status" />
           <span class="time">{{ item.updated_at }}</span>
         </div>
-        <p class="url">{{ item.url }}</p>
+        <p class="url" :title="item.status === 'completed' ? (item.output_dir || item.url) : ''">{{ item.url }}</p>
         <div class="row_bottom">
+          <button
+            v-if="item.status === 'completed'"
+            class="btn-secondary btn-sm"
+            :disabled="!item.output_dir"
+            @click="openResult(item.output_dir)"
+          >
+            {{ t("queue_action_open") }}
+          </button>
           <button class="btn-secondary btn-sm" @click="store.deleteHistoryItem(item.id)">
             {{ t("history_action_delete") }}
           </button>
@@ -40,16 +48,33 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { useHistoryStore } from "@/stores/history";
+import { useUiStore } from "@/stores/ui";
+import { extractErrorMessage } from "@/stores/apiHelpers";
 import UiStatusTag from "@/components/UiStatusTag.vue";
 import UiEmptyState from "@/components/UiEmptyState.vue";
 import UiLoadingRows from "@/components/UiLoadingRows.vue";
 import { t } from "@/i18n/strings";
 
 const store = useHistoryStore();
+const uiStore = useUiStore();
 onMounted(() => {
   // 历史记录来自后端 SQLite 持久化，不会因前端刷新而丢失。
   store.refreshHistory();
 });
+
+async function openResult(outputDir?: string) {
+  if (!outputDir) {
+    uiStore.showNotice("error", t("notice_open_task_result_failed", { error: t("common_unknown") }));
+    return;
+  }
+  try {
+    const ok = await window.desktopAPI?.revealPath?.(outputDir);
+    if (ok) return;
+    uiStore.showNotice("error", t("notice_open_task_result_failed", { error: t("common_unknown") }));
+  } catch (error) {
+    uiStore.showNotice("error", t("notice_open_task_result_failed", { error: extractErrorMessage(error) }));
+  }
+}
 </script>
 
 <style scoped>
@@ -117,6 +142,7 @@ h2 {
   margin-top: 10px;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
 }
 
 .btn-secondary {

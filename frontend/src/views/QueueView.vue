@@ -27,16 +27,23 @@
         </thead>
         <tbody>
           <tr v-for="task in store.tasks" :key="task.id">
-            <td class="url">{{ task.url }}</td>
+            <td class="url" :title="task.status === 'completed' ? (task.output_dir || task.url) : ''">{{ task.url }}</td>
             <td><UiStatusTag :status="task.status" /></td>
-            <td>{{ task.progress.toFixed(1) }}%</td>
+            <td class="progress_cell">
+              <span class="progress_anchor">
+                <span class="progress_value">{{ task.progress.toFixed(1) }}%</span>
+                <span v-if="task.status === 'running' && task.eta" class="eta_tip">
+                  {{ t("queue_eta_prefix") }} {{ task.eta }}
+                </span>
+              </span>
+            </td>
             <td class="actions_cell">
               <button
                 class="btn-secondary"
-                @click="task.status === 'failed' ? retry(task.id) : cancel(task.id)"
-                :disabled="task.status !== 'running' && task.status !== 'pending' && task.status !== 'failed'"
+                @click="handlePrimaryAction(task)"
+                :disabled="isPrimaryActionDisabled(task)"
               >
-                {{ task.status === "failed" ? t("queue_action_retry") : t("queue_action_cancel") }}
+                {{ getPrimaryActionText(task) }}
               </button>
               <button class="btn-secondary danger" @click="removeTask(task.id)" :disabled="task.status === 'running'">
                 {{ t("queue_action_delete") }}
@@ -52,12 +59,16 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { useTaskRuntimeStore } from "@/stores/taskRuntime";
+import { useUiStore } from "@/stores/ui";
+import { extractErrorMessage } from "@/stores/apiHelpers";
+import type { UiTask } from "@/stores/types";
 import UiStatusTag from "@/components/UiStatusTag.vue";
 import UiEmptyState from "@/components/UiEmptyState.vue";
 import UiLoadingRows from "@/components/UiLoadingRows.vue";
 import { t } from "@/i18n/strings";
 
 const store = useTaskRuntimeStore();
+const uiStore = useUiStore();
 
 // 页面初始化时读取一次任务快照，并自动接入实时推送。
 onMounted(() => {
@@ -78,6 +89,43 @@ async function removeTask(taskId: string) {
 
 async function refresh() {
   await store.refreshTasks();
+}
+
+function getPrimaryActionText(task: UiTask): string {
+  if (task.status === "completed") return t("queue_action_open");
+  if (task.status === "failed") return t("queue_action_retry");
+  return t("queue_action_cancel");
+}
+
+function isPrimaryActionDisabled(task: UiTask): boolean {
+  if (task.status === "completed") return !task.output_dir;
+  return task.status !== "running" && task.status !== "pending" && task.status !== "failed";
+}
+
+async function handlePrimaryAction(task: UiTask) {
+  if (task.status === "completed") {
+    await openResult(task);
+    return;
+  }
+  if (task.status === "failed") {
+    await retry(task.id);
+    return;
+  }
+  await cancel(task.id);
+}
+
+async function openResult(task: UiTask) {
+  if (!task.output_dir) {
+    uiStore.showNotice("error", t("notice_open_task_result_failed", { error: t("common_unknown") }));
+    return;
+  }
+  try {
+    const ok = await window.desktopAPI?.revealPath?.(task.output_dir);
+    if (ok) return;
+    uiStore.showNotice("error", t("notice_open_task_result_failed", { error: t("common_unknown") }));
+  } catch (error) {
+    uiStore.showNotice("error", t("notice_open_task_result_failed", { error: extractErrorMessage(error) }));
+  }
 }
 </script>
 
@@ -139,6 +187,39 @@ thead th {
 
 .actions_cell {
   white-space: nowrap;
+}
+
+.progress_cell {
+  white-space: nowrap;
+}
+
+.progress_anchor {
+  position: relative;
+  display: inline-block;
+  overflow: visible;
+}
+
+.eta_tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 1px);
+  transform: translateX(-50%);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 4px 8px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 6;
+}
+
+.progress_cell:hover .eta_tip {
+  opacity: 1;
 }
 
 .btn-secondary {

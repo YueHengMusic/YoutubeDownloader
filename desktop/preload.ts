@@ -15,6 +15,10 @@ contextBridge.exposeInMainWorld("desktopAPI", {
   openExternalUrl: async (url: string): Promise<boolean> => {
     return ipcRenderer.invoke("shell:open-external-url", url);
   },
+  // 在系统文件管理器中定位到目标文件（或打开目标目录）。
+  revealPath: async (targetPath: string): Promise<boolean> => {
+    return ipcRenderer.invoke("shell:reveal-path", targetPath);
+  },
   // 获取桌面应用版本号（来自主进程 app.getVersion）。
   getAppVersion: async (): Promise<string> => {
     return ipcRenderer.invoke("app:get-version");

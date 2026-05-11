@@ -192,6 +192,28 @@ ipcMain.handle("shell:open-external-url", async (_event, rawUrl: string) => {
   return true;
 });
 
+// IPC：在系统文件管理器中打开文件并选中（若是目录则直接打开目录）。
+ipcMain.handle("shell:reveal-path", async (_event, rawPath: string) => {
+  if (typeof rawPath !== "string") return false;
+  const safePath = rawPath.trim().replace(/^"(.*)"$/, "$1");
+  if (!safePath) return false;
+  const normalizedPath = path.normalize(safePath);
+  if (!fs.existsSync(normalizedPath)) {
+    // 文件不存在时兜底打开父目录，避免前端只能拿到“未知失败”。
+    const parentDir = path.dirname(normalizedPath);
+    if (!fs.existsSync(parentDir)) return false;
+    await shell.openPath(parentDir);
+    return true;
+  }
+  const stat = fs.statSync(normalizedPath);
+  if (stat.isDirectory()) {
+    await shell.openPath(normalizedPath);
+    return true;
+  }
+  shell.showItemInFolder(normalizedPath);
+  return true;
+});
+
 // IPC：读取应用版本号（优先来自 Electron 打包版本信息）。
 ipcMain.handle("app:get-version", async () => {
   return app.getVersion();

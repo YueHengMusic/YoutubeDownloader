@@ -233,11 +233,13 @@ label {
 .row {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .row > input,
 .row > select {
   flex: 1;
+  min-width: 220px;
 }
 
 .row > .btn-secondary {
@@ -276,10 +278,11 @@ label {
   border: 1px solid var(--hairline);
   border-radius: 12px;
   background: var(--surface-soft);
-  padding: 10px 12px;
+  padding: var(--card_padding_compact);
   font-size: 13px;
   color: var(--body);
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .tip_card a {
@@ -291,7 +294,7 @@ input {
   width: 100%;
   border: 1px solid var(--hairline);
   border-radius: 9999px;
-  height: 40px;
+  height: var(--field_height);
   padding: 8px 16px;
   outline: none;
 }
@@ -305,7 +308,7 @@ input:focus {
 .btn-primary,
 .btn-secondary {
   border-radius: 9999px;
-  height: 36px;
+  height: var(--control_height);
   padding: 8px 20px;
   cursor: pointer;
   font-size: 14px;
@@ -330,5 +333,27 @@ input:focus {
   border-color: var(--hairline);
   color: var(--mute);
   cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  /* 小屏下保持标签和提示按钮同行，避免提示按钮被挤到下一行影响可发现性。 */
+  .label_with_tip {
+    justify-content: space-between;
+  }
+  .row > input,
+  .row > select {
+    min-width: 0;
+    width: 100%;
+  }
+  .row > .btn-secondary {
+    width: 100%;
+  }
+  input {
+    height: var(--field_height_compact);
+  }
+  .btn-primary,
+  .btn-secondary {
+    height: var(--control_height_compact);
+  }
 }
 </style>

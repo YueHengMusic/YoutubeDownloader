@@ -195,7 +195,7 @@ h3 {
 .card {
   border: 1px solid var(--hairline);
   border-radius: 12px;
-  padding: 20px;
+  padding: var(--card_padding);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -230,7 +230,7 @@ h3 {
 
 .input_number {
   width: 120px;
-  height: 36px;
+  height: var(--control_height);
   border-radius: 9999px;
   border: 1px solid var(--hairline-strong);
   background: var(--canvas);
@@ -254,7 +254,7 @@ h3 {
 .btn-primary,
 .btn-secondary {
   border-radius: 9999px;
-  height: 36px;
+  height: var(--control_height);
   padding: 8px 20px;
   cursor: pointer;
   font-size: 14px;
@@ -290,12 +290,37 @@ h3 {
   margin: 0;
   font-size: 13px;
   color: var(--body);
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 760px) {
+  .card {
+    padding: var(--card_padding_compact);
+  }
   .info_row {
     grid-template-columns: 1fr;
     gap: 2px;
+  }
+  .btn-primary,
+  .btn-secondary {
+    flex: 1 1 220px;
+  }
+  .input_number {
+    width: 100%;
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 560px) {
+  /* 小屏时按钮改为整行，避免英文文案下出现拥挤换行。 */
+  .btn-primary,
+  .btn-secondary {
+    height: var(--control_height_compact);
+    width: 100%;
+    min-width: 0;
+  }
+  .input_number {
+    max-width: none;
   }
 }
 </style>

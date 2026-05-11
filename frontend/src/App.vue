@@ -1,6 +1,6 @@
 <template>
   <div class="app-shell">
-    <header class="primary-nav">
+    <header ref="primaryNavRef" class="primary-nav">
       <div class="nav-inner">
         <div class="brand-group">
           <div class="brand-dot">{{ t("app_brand_short") }}</div>
@@ -30,7 +30,7 @@
     </header>
 
     <main class="page">
-      <section v-if="store.notice.visible" class="notice" :data-type="store.notice.type">
+      <section v-if="store.notice.visible" class="notice" :style="{ top: `${notice_top}px` }" :data-type="store.notice.type">
         <span>{{ store.notice.message }}</span>
       </section>
 
@@ -82,8 +82,20 @@ import type { TerminalStreamType } from "@/stores/tasks";
 const store = useTaskStore();
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
 const terminalBodyRef = ref<HTMLElement | null>(null);
+const primaryNavRef = ref<HTMLElement | null>(null);
 const yt_dlp_repo_url = "https://github.com/yt-dlp/yt-dlp";
 const currentYear = new Date().getFullYear();
+const notice_top = ref(70);
+let nav_resize_observer: ResizeObserver | null = null;
+
+/**
+ * 根据 header 实际高度计算提示浮层顶部偏移。
+ * 这样在窄屏换行或语言切换时，提示都不会遮挡导航。
+ */
+function update_notice_top() {
+  const header_height = primaryNavRef.value?.getBoundingClientRect().height ?? 56;
+  notice_top.value = Math.round(header_height + 10);
+}
 
 watch(
   () => `${store.notice.visible}:${store.notice.nonce}`,
@@ -135,11 +147,29 @@ async function openYtDlpRepo() {
 
 onBeforeUnmount(() => {
   if (noticeTimer) clearTimeout(noticeTimer);
+  window.removeEventListener("resize", update_notice_top);
+  if (nav_resize_observer) {
+    nav_resize_observer.disconnect();
+    nav_resize_observer = null;
+  }
 });
 
 onMounted(() => {
   // 全局壳组件启动时就连接 WS，确保在任意页面都能收到实时终端输出。
   store.connectWs();
+  /**
+   * 提示浮层位置跟随 header 实时计算：
+   * - 保证提示始终出现在 header 下方，不遮挡导航内容；
+   * - 兼容小屏换行、语言切换等导致的 header 高度变化。
+   */
+  update_notice_top();
+  window.addEventListener("resize", update_notice_top);
+  nav_resize_observer = new ResizeObserver(() => {
+    update_notice_top();
+  });
+  if (primaryNavRef.value) {
+    nav_resize_observer.observe(primaryNavRef.value);
+  }
 });
 </script>
 
@@ -157,6 +187,15 @@ onMounted(() => {
   --hairline: #e5e5e5;
   --hairline-strong: #d4d4d4;
   --focus-ring: rgba(59, 130, 246, 0.5);
+  /* 统一尺寸节奏：按钮高度、输入高度、卡片内边距在各页面复用。 */
+  --control_height: 36px;
+  --control_height_compact: 32px;
+  --field_height: 40px;
+  --field_height_compact: 36px;
+  --card_padding: 20px;
+  --card_padding_compact: 16px;
+  /* 页面主内容最大宽度：窗口足够时自动变宽，不再固定窄列。 */
+  --layout_max_width: 1160px;
 }
 
 * {
@@ -191,26 +230,30 @@ a {
 }
 
 .primary-nav {
-  height: 56px;
+  min-height: 56px;
   border-bottom: 1px solid var(--hairline);
   background: var(--canvas);
 }
 
 .nav-inner {
-  height: 100%;
-  max-width: 900px;
+  min-height: 56px;
+  max-width: var(--layout_max_width);
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 8px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: nowrap;
 }
 
 .brand-group {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .brand-dot {
@@ -233,6 +276,7 @@ a {
 .nav-link {
   font-size: 14px;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .lang-switch {
@@ -245,10 +289,14 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  flex: 0 0 auto;
 }
 
 .terminal-toggle {
-  height: 32px;
+  min-width: 96px;
+  height: var(--control_height);
   border: 1px solid var(--hairline);
   border-radius: 9999px;
   background: var(--canvas);
@@ -278,7 +326,8 @@ a {
 }
 
 .lang-pill {
-  height: 28px;
+  min-width: 68px;
+  height: var(--control_height);
   border: 0;
   border-radius: 9999px;
   padding: 0 10px;
@@ -294,7 +343,7 @@ a {
 }
 
 .page {
-  max-width: 760px;
+  max-width: var(--layout_max_width);
   margin: 0 auto;
   padding: 24px 20px 32px;
 }
@@ -337,6 +386,7 @@ a {
   line-height: 1.11;
   font-weight: 500;
   font-family: "SF Pro Rounded", ui-rounded, ui-sans-serif, system-ui, sans-serif;
+  word-break: break-word;
 }
 
 .hero p {
@@ -348,11 +398,11 @@ a {
 .page-content {
   border: 1px solid var(--hairline);
   border-radius: 12px;
-  padding: 24px;
+  padding: var(--card_padding);
 }
 
 .app-footer {
-  max-width: 760px;
+  max-width: var(--layout_max_width);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -364,7 +414,7 @@ a {
   background: var(--canvas);
   border: 1px solid var(--hairline);
   border-radius: 12px;
-  padding: 16px;
+  padding: var(--card_padding_compact);
 }
 
 .terminal-header {
@@ -381,7 +431,7 @@ a {
   border-radius: 9999px;
   background: var(--canvas);
   color: var(--ink);
-  height: 32px;
+  height: var(--control_height);
   padding: 0 10px;
   cursor: pointer;
 }
@@ -403,21 +453,26 @@ a {
 
 .terminal-line {
   margin: 0 0 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
 }
 
 .terminal-meta {
   color: var(--body);
-  margin-right: 8px;
+  flex: 0 0 auto;
 }
 
 .terminal-text {
   color: var(--ink);
+  flex: 1 1 260px;
+  word-break: break-word;
 }
 
 .copyright-card {
   border: 1px solid var(--hairline);
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: var(--card_padding_compact);
   background: var(--canvas);
   display: flex;
   flex-direction: column;
@@ -430,6 +485,7 @@ a {
   margin: 0;
   font-size: 13px;
   color: var(--body);
+  overflow-wrap: anywhere;
 }
 
 .copyright-line a {
@@ -437,7 +493,24 @@ a {
   text-decoration: underline;
 }
 
+@media (max-width: 900px) {
+  /* 中等宽度：允许导航自动换行，但不强制上下分层。 */
+  .nav-inner {
+    flex-wrap: wrap;
+  }
+  .brand-group {
+    flex-wrap: wrap;
+  }
+  .nav-actions {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 840px) {
+  .nav-inner {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
   .hero h1 {
     font-size: 28px;
   }
@@ -455,6 +528,67 @@ a {
   }
   .app-footer {
     padding-bottom: 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  /* 极窄窗口下才固定分层，确保可点区域与可读性。 */
+  .primary-nav {
+    padding-bottom: 4px;
+  }
+  .nav-inner {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .brand-group {
+    width: 100%;
+    flex: 1 1 100%;
+    gap: 6px 10px;
+  }
+  .nav-actions {
+    width: 100%;
+    flex: 1 1 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .lang-switch {
+    min-width: 0;
+  }
+  .lang-pill-group {
+    max-width: 100%;
+  }
+  .lang-pill {
+    min-width: 58px;
+    padding: 0 8px;
+  }
+  .page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .page-content {
+    padding: var(--card_padding_compact);
+  }
+  .brand-group {
+    gap: 8px;
+  }
+  .nav-link {
+    font-size: 13px;
+  }
+  .terminal-toggle {
+    height: var(--control_height_compact);
+    padding: 0 10px;
+  }
+  .app-footer {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .terminal-header {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .terminal-clear {
+    width: 100%;
+    height: var(--control_height_compact);
   }
 }
 </style>

@@ -67,8 +67,12 @@ npm run dev:electron
   - `npm run dist:mac`
   - `npm run dist:linux`
 - 仅生成目录（调试打包用）：`npm run pack`
+- 图标一键生成（`svg -> png/ico/icns`）：`npm run generate:icons`
 
-> `electron-builder` 已配置把 `resources/bin/{windows,macos,linux}` 自动映射到安装包内。
+> `electron-builder` 已配置把 `resources/bin/{windows,macos,linux}` 与 `resources/icons` 自动映射到安装包内，并使用：
+> - Windows：`resources/icons/app_icon.ico`
+> - macOS：`resources/icons/app_icon.icns`
+> - Linux：`resources/icons/app_icon.png`
 
 ## 详细命令手册
 - 见 `docs/命令手册.md`（含更多启动、构建、打包、排错命令）。

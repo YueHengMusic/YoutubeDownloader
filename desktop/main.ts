@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, Menu, dialog, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
 import { spawn, ChildProcess } from "node:child_process";
 import fs from "node:fs";
@@ -7,6 +7,32 @@ let backendProcess: ChildProcess | null = null;
 const DEV_FRONTEND_URL = "http://127.0.0.1:5173";
 const BACKEND_HOST = "127.0.0.1";
 const BACKEND_PORT = "8000";
+
+/**
+ * 获取桌面端窗口图标路径：
+ * - Windows 优先使用 .ico（任务栏/窗口标题图标更稳定）；
+ * - macOS/Linux 使用 .png；
+ * - 开发与打包路径保持同构，便于排查资源问题。
+ */
+function getWindowIconPath(): string {
+  const iconFileName = process.platform === "win32" ? "app_icon.ico" : "app_icon.png";
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "icons", iconFileName);
+  }
+  return path.resolve(__dirname, "../../resources/icons", iconFileName);
+}
+
+/**
+ * 读取窗口图标：
+ * - 优先使用平台推荐格式（win: ico / other: png）；
+ * - 读取失败时返回 undefined，Electron 会回退默认行为，不阻断启动。
+ */
+function loadWindowIcon() {
+  const iconPath = getWindowIconPath();
+  const iconImage = nativeImage.createFromPath(iconPath);
+  if (!iconImage.isEmpty()) return iconImage;
+  return undefined;
+}
 
 /**
  * 获取后端目录。
@@ -58,15 +84,21 @@ async function isDevServerAvailable(url: string): Promise<boolean> {
  * 3) 如果构建产物也不存在，展示可操作的错误提示页。
  */
 async function createWindow(): Promise<void> {
+  const windowIcon = loadWindowIcon();
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: windowIcon,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
       contextIsolation: true
     }
   });
+  // 明确移除窗口菜单栏，避免显示默认 File/Edit/View 等菜单。
+  win.setMenuBarVisibility(false);
+  win.removeMenu();
 
   const hasDevServer = await isDevServerAvailable(DEV_FRONTEND_URL);
   if (hasDevServer) {
@@ -110,6 +142,10 @@ function startBackend(): void {
 }
 
 app.whenReady().then(() => {
+  // Windows 任务栏分组与图标关联标识，确保打包后图标展示稳定。
+  app.setAppUserModelId("com.yueh.ytdlpgui");
+  // 全局移除应用菜单（Windows/Linux 顶部菜单栏；macOS 全局菜单）。
+  Menu.setApplicationMenu(null);
   startBackend();
   void createWindow();
 });

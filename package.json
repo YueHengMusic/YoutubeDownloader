@@ -10,6 +10,7 @@
     "dev:electron": "npm run build:electron && electron dist/desktop/main.js",
     "build:frontend": "vite build --config frontend/vite.config.ts",
     "build:electron": "tsc -p tsconfig.desktop.json",
+    "generate:icons": "node scripts/generate_icons.cjs",
     "build": "npm run build:frontend && npm run build:electron",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
@@ -24,11 +25,14 @@
     "vue-router": "^4.4.5"
   },
   "devDependencies": {
+    "@fiahfy/icns": "^0.0.7",
     "@types/node": "^22.7.4",
     "@vitejs/plugin-vue": "^5.1.4",
     "concurrently": "^9.0.1",
     "electron": "^32.2.1",
     "electron-builder": "^24.13.3",
+    "png-to-ico": "^2.1.8",
+    "sharp": "^0.34.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2",
     "vite": "^5.4.8",
@@ -38,6 +42,7 @@
   "build": {
     "appId": "com.yueh.ytdlpgui",
     "productName": "YtDlpGui",
+    "icon": "resources/icons/app_icon.png",
     "directories": {
       "output": "release"
     },
@@ -64,15 +69,21 @@
       {
         "from": "resources/bin",
         "to": "bin"
+      },
+      {
+        "from": "resources/icons",
+        "to": "icons"
       }
     ],
     "win": {
+      "icon": "resources/icons/app_icon.ico",
       "target": [
         "nsis"
       ],
       "artifactName": "${productName}-${version}-win-${arch}.${ext}"
     },
     "mac": {
+      "icon": "resources/icons/app_icon.icns",
       "target": [
         "dmg",
         "zip"
@@ -81,6 +92,7 @@
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
+      "icon": "resources/icons/app_icon.png",
       "target": [
         "AppImage",
         "deb"

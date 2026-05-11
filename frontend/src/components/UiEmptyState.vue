@@ -29,7 +29,7 @@ defineEmits<{
 .empty-state {
   border: 1px dashed var(--hairline-strong);
   border-radius: 12px;
-  padding: 24px;
+  padding: var(--card_padding);
   text-align: center;
   background: var(--surface-soft);
 }
@@ -48,11 +48,20 @@ p {
 .btn-secondary {
   margin-top: 12px;
   border-radius: 9999px;
-  height: 36px;
+  height: var(--control_height);
   padding: 8px 20px;
   border: 1px solid var(--hairline-strong);
   background: var(--canvas);
   color: var(--ink);
   cursor: pointer;
+}
+
+@media (max-width: 560px) {
+  .empty-state {
+    padding: var(--card_padding_compact);
+  }
+  .btn-secondary {
+    height: var(--control_height_compact);
+  }
 }
 </style>

@@ -15,31 +15,33 @@
       :action-label="t('common_retry')"
       @action="refresh"
     />
-    <table v-else>
-      <thead>
-        <tr>
-          <th>{{ t("queue_table_url") }}</th>
-          <th>{{ t("queue_table_status") }}</th>
-          <th>{{ t("queue_table_progress") }}</th>
-          <th>{{ t("queue_table_action") }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="task in store.tasks" :key="task.id">
-          <td class="url">{{ task.url }}</td>
-          <td><UiStatusTag :status="task.status" /></td>
-          <td>{{ task.progress.toFixed(1) }}%</td>
-          <td>
-            <button class="btn-secondary" @click="cancel(task.id)" :disabled="task.status !== 'running' && task.status !== 'pending'">
-              {{ t("queue_action_cancel") }}
-            </button>
-            <button class="btn-secondary danger" @click="removeTask(task.id)" :disabled="task.status === 'running'">
-              {{ t("queue_action_delete") }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-else class="table_wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t("queue_table_url") }}</th>
+            <th>{{ t("queue_table_status") }}</th>
+            <th>{{ t("queue_table_progress") }}</th>
+            <th>{{ t("queue_table_action") }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="task in store.tasks" :key="task.id">
+            <td class="url">{{ task.url }}</td>
+            <td><UiStatusTag :status="task.status" /></td>
+            <td>{{ task.progress.toFixed(1) }}%</td>
+            <td class="actions_cell">
+              <button class="btn-secondary" @click="cancel(task.id)" :disabled="task.status !== 'running' && task.status !== 'pending'">
+                {{ t("queue_action_cancel") }}
+              </button>
+              <button class="btn-secondary danger" @click="removeTask(task.id)" :disabled="task.status === 'running'">
+                {{ t("queue_action_delete") }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </template>
 
@@ -82,6 +84,8 @@ async function refresh() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 h2 {
@@ -92,8 +96,14 @@ h2 {
   font-family: "SF Pro Rounded", ui-rounded, ui-sans-serif, system-ui, sans-serif;
 }
 
+.table_wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
   border: 1px solid var(--hairline);
   border-radius: 12px;
@@ -113,15 +123,19 @@ thead th {
 }
 
 .url {
-  max-width: 280px;
+  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.actions_cell {
+  white-space: nowrap;
+}
+
 .btn-secondary {
   border-radius: 9999px;
-  height: 36px;
+  height: var(--control_height);
   padding: 8px 20px;
   border: 1px solid var(--hairline-strong);
   background: var(--canvas);
@@ -138,5 +152,15 @@ thead th {
   border-color: var(--hairline);
   color: var(--mute);
   cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  table {
+    min-width: 560px;
+  }
+  .btn-secondary {
+    height: var(--control_height_compact);
+    padding: 6px 14px;
+  }
 }
 </style>

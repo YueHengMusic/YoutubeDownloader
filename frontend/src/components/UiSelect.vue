@@ -99,7 +99,7 @@ onBeforeUnmount(() => {
 
 .ui_select_trigger {
   width: 100%;
-  height: 40px;
+  height: var(--field_height);
   border: 1px solid var(--hairline);
   border-radius: 9999px;
   padding: 0 14px;
@@ -145,7 +145,7 @@ onBeforeUnmount(() => {
 }
 
 .ui_select_option {
-  height: 36px;
+  height: var(--control_height);
   border: 0;
   border-radius: 8px;
   padding: 0 12px;
@@ -166,5 +166,14 @@ onBeforeUnmount(() => {
 .ui_select_option:disabled {
   color: var(--mute);
   cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  .ui_select_trigger {
+    height: var(--field_height_compact);
+  }
+  .ui_select_option {
+    height: var(--control_height_compact);
+  }
 }
 </style>

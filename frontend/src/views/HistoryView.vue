@@ -63,12 +63,15 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 h2 {
@@ -88,7 +91,7 @@ h2 {
 .item {
   border: 1px solid var(--hairline);
   border-radius: 12px;
-  padding: 12px;
+  padding: var(--card_padding_compact);
 }
 
 .row {
@@ -96,12 +99,14 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .meta {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .time {
@@ -117,7 +122,7 @@ h2 {
 
 .btn-secondary {
   border-radius: 9999px;
-  height: 36px;
+  height: var(--control_height);
   padding: 8px 20px;
   border: 1px solid var(--hairline-strong);
   background: var(--canvas);
@@ -133,7 +138,27 @@ h2 {
 }
 
 .btn-sm {
-  height: 30px;
+  height: var(--control_height_compact);
   padding: 0 12px;
+}
+
+@media (max-width: 560px) {
+  .actions {
+    width: 100%;
+  }
+  .btn-secondary {
+    height: var(--control_height_compact);
+    padding: 6px 14px;
+  }
+  .actions .btn-secondary {
+    flex: 1 1 160px;
+  }
+  .meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .btn-sm {
+    margin-left: auto;
+  }
 }
 </style>

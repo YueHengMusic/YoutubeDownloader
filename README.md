@@ -4,7 +4,6 @@
 当前版本仅计划适配 Windows 平台。
 
 <img width="1184" height="967" alt="95572ef2-a1e2-4536-b35d-35a2eca3fdeb" src="https://github.com/user-attachments/assets/4ba36770-dca4-43d0-a1b1-efe7ec7c2fa9" />
-<img width="1184" height="967" alt="95572ef2-a1e2-4536-b35d-35a2eca3fdeb" src="https://github.com/user-attachments/assets/4861d9f9-0e91-4341-a4ba-8f9d22cb36fb" />
 <img width="1184" height="967" alt="c5737b56-b3fb-4292-8300-714bd79af47c" src="https://github.com/user-attachments/assets/69bc1ca2-1f72-468a-bd5c-68efbb88584f" />
 
 ## 你会得到什么

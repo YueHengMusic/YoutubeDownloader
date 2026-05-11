@@ -19,7 +19,7 @@
       <table>
         <thead>
           <tr>
-            <th>{{ t("queue_table_url") }}</th>
+            <th>{{ t("queue_table_file_name") }}</th>
             <th>{{ t("queue_table_status") }}</th>
             <th>{{ t("queue_table_progress") }}</th>
             <th>{{ t("queue_table_action") }}</th>
@@ -27,7 +27,7 @@
         </thead>
         <tbody>
           <tr v-for="task in store.tasks" :key="task.id">
-            <td class="url">{{ task.url }}</td>
+            <td class="file_name" :title="task.url">{{ get_file_name_from_url(task.url, t("queue_file_name_unknown")) }}</td>
             <td><UiStatusTag :status="task.status" /></td>
             <td>{{ task.progress.toFixed(1) }}%</td>
             <td class="actions_cell">
@@ -47,17 +47,18 @@
 
 <script setup lang="ts">
 import { onMounted } from "vue";
-import { useTaskStore } from "@/stores/tasks";
+import { useTaskRuntimeStore } from "@/stores/taskRuntime";
 import UiStatusTag from "@/components/UiStatusTag.vue";
 import UiEmptyState from "@/components/UiEmptyState.vue";
 import UiLoadingRows from "@/components/UiLoadingRows.vue";
 import { t } from "@/i18n/strings";
+import { get_file_name_from_url } from "@/utils/url_file_name";
 
-const store = useTaskStore();
+const store = useTaskRuntimeStore();
 
 // 页面初始化时读取一次任务快照，并自动接入实时推送。
 onMounted(() => {
-  store.init();
+  store.refreshTasks();
 });
 
 async function cancel(taskId: string) {
@@ -69,7 +70,7 @@ async function removeTask(taskId: string) {
 }
 
 async function refresh() {
-  await store.init();
+  await store.refreshTasks();
 }
 </script>
 
@@ -122,7 +123,7 @@ thead th {
   background: var(--surface-soft);
 }
 
-.url {
+.file_name {
   max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;

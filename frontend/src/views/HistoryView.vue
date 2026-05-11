@@ -3,11 +3,11 @@
     <div class="head">
       <h2>{{ t("history_title") }}</h2>
       <div class="actions">
-        <button class="btn-secondary" @click="store.refreshHistory" :disabled="store.isRefreshingHistory">
-          {{ store.isRefreshingHistory ? t("common_refreshing") : t("common_refresh") }}
-        </button>
         <button class="btn-secondary" @click="store.clearHistory" :disabled="store.history.length === 0">
           {{ t("history_action_clear_all") }}
+        </button>
+        <button class="btn-secondary" @click="store.refreshHistory" :disabled="store.isRefreshingHistory">
+          {{ store.isRefreshingHistory ? t("common_refreshing") : t("common_refresh") }}
         </button>
       </div>
     </div>
@@ -22,16 +22,16 @@
     />
     <div v-else class="list">
       <article class="item" v-for="item in store.history" :key="item.id">
-        <div class="row">
+        <div class="row_top">
           <UiStatusTag :status="item.status" />
-          <div class="meta">
-            <span class="time">{{ item.updated_at }}</span>
-            <button class="btn-secondary btn-sm" @click="store.deleteHistoryItem(item.id)">
-              {{ t("history_action_delete") }}
-            </button>
-          </div>
+          <span class="time">{{ item.updated_at }}</span>
         </div>
-        <p class="url">{{ item.url }}</p>
+        <p class="file_name" :title="item.url">{{ get_file_name_from_url(item.url, t("history_file_name_unknown")) }}</p>
+        <div class="row_bottom">
+          <button class="btn-secondary btn-sm" @click="store.deleteHistoryItem(item.id)">
+            {{ t("history_action_delete") }}
+          </button>
+        </div>
       </article>
     </div>
   </section>
@@ -39,13 +39,14 @@
 
 <script setup lang="ts">
 import { onMounted } from "vue";
-import { useTaskStore } from "@/stores/tasks";
+import { useHistoryStore } from "@/stores/history";
 import UiStatusTag from "@/components/UiStatusTag.vue";
 import UiEmptyState from "@/components/UiEmptyState.vue";
 import UiLoadingRows from "@/components/UiLoadingRows.vue";
 import { t } from "@/i18n/strings";
+import { get_file_name_from_url } from "@/utils/url_file_name";
 
-const store = useTaskStore();
+const store = useHistoryStore();
 onMounted(() => {
   // 历史记录来自后端 SQLite 持久化，不会因前端刷新而丢失。
   store.refreshHistory();
@@ -94,18 +95,11 @@ h2 {
   padding: var(--card_padding_compact);
 }
 
-.row {
+.row_top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
-}
-
-.meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -114,10 +108,19 @@ h2 {
   font-size: 12px;
 }
 
-.url {
+.file_name {
   margin: 8px 0 0;
   font-size: 14px;
-  word-break: break-all;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row_bottom {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .btn-secondary {
@@ -152,10 +155,6 @@ h2 {
   }
   .actions .btn-secondary {
     flex: 1 1 160px;
-  }
-  .meta {
-    width: 100%;
-    justify-content: space-between;
   }
   .btn-sm {
     margin-left: auto;

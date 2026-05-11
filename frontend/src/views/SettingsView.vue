@@ -10,11 +10,11 @@
           <span class="info_key">{{ t("settings_label_download_concurrency") }}</span>
           <span class="info_value">
             <input
-              v-model.number="store.downloadConcurrencyInput"
+              v-model.number="settingsStore.downloadConcurrencyInput"
               class="input_number"
               type="number"
-              :min="store.appSettings?.min_download_concurrency ?? 1"
-              :max="store.appSettings?.max_download_concurrency ?? 20"
+              :min="settingsStore.appSettings?.min_download_concurrency ?? 1"
+              :max="settingsStore.appSettings?.max_download_concurrency ?? 20"
             />
           </span>
         </div>
@@ -22,15 +22,19 @@
       <p class="card_hint">
         {{
           t("settings_download_concurrency_hint", {
-            min: store.appSettings?.min_download_concurrency ?? 1,
-            max: store.appSettings?.max_download_concurrency ?? 20,
-            defaultValue: store.appSettings?.default_download_concurrency ?? 2
+            min: settingsStore.appSettings?.min_download_concurrency ?? 1,
+            max: settingsStore.appSettings?.max_download_concurrency ?? 20,
+            defaultValue: settingsStore.appSettings?.default_download_concurrency ?? 2
           })
         }}
       </p>
       <div class="row">
-        <button class="btn-primary" @click="saveSettings" :disabled="store.isSavingAppSettings || store.isRefreshingAppSettings">
-          {{ store.isSavingAppSettings ? t("settings_button_saving") : t("settings_button_save") }}
+        <button
+          class="btn-primary"
+          @click="saveSettings"
+          :disabled="settingsStore.isSavingAppSettings || settingsStore.isRefreshingAppSettings"
+        >
+          {{ settingsStore.isSavingAppSettings ? t("settings_button_saving") : t("settings_button_save") }}
         </button>
       </div>
     </article>
@@ -42,36 +46,46 @@
           <span class="info_key">{{ t("settings_label_installed_version") }}</span>
           <span class="info_value">
             {{
-              store.ytDlpStatus?.installed_version
-                || (store.dependencyStatus?.yt_dlp.exists ? t("settings_installed_unchecked") : t("common_not_installed"))
+              systemStore.ytDlpStatus?.installed_version
+                || (systemStore.dependencyStatus?.yt_dlp.exists ? t("settings_installed_unchecked") : t("common_not_installed"))
             }}
           </span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_latest_version") }}</span>
-          <span class="info_value">{{ store.ytDlpStatus?.latest_version || t("common_dash") }}</span>
+          <span class="info_value">{{ systemStore.ytDlpStatus?.latest_version || t("common_dash") }}</span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_need_update") }}</span>
           <span class="info_value">
             {{
-              store.ytDlpStatus == null
+              systemStore.ytDlpStatus == null
                 ? t("common_dash")
-                : (store.ytDlpStatus.has_update ? t("common_yes") : t("common_no"))
+                : (systemStore.ytDlpStatus.has_update ? t("common_yes") : t("common_no"))
             }}
           </span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_binary_path") }}</span>
-          <span class="info_value long">{{ store.ytDlpStatus?.binary_path || store.dependencyStatus?.yt_dlp.path || t("common_dash") }}</span>
+          <span class="info_value long">{{
+            systemStore.ytDlpStatus?.binary_path || systemStore.dependencyStatus?.yt_dlp.path || t("common_dash")
+          }}</span>
         </div>
       </div>
       <div class="row">
-        <button class="btn-secondary" @click="checkYtDlp" :disabled="store.isCheckingYtDlp || store.isUpdatingYtDlp">
-          {{ store.isCheckingYtDlp ? t("settings_button_checking") : t("settings_button_check_update") }}
+        <button
+          class="btn-secondary"
+          @click="checkYtDlp"
+          :disabled="systemStore.isCheckingYtDlp || systemStore.isUpdatingYtDlp"
+        >
+          {{ systemStore.isCheckingYtDlp ? t("settings_button_checking") : t("settings_button_check_update") }}
         </button>
-        <button class="btn-primary" @click="updateYtDlp" :disabled="store.isUpdatingYtDlp || store.isCheckingYtDlp">
-          {{ store.isUpdatingYtDlp ? t("settings_button_updating") : t("settings_button_update_ytdlp") }}
+        <button
+          class="btn-primary"
+          @click="updateYtDlp"
+          :disabled="systemStore.isUpdatingYtDlp || systemStore.isCheckingYtDlp"
+        >
+          {{ systemStore.isUpdatingYtDlp ? t("settings_button_updating") : t("settings_button_update_ytdlp") }}
         </button>
       </div>
     </article>
@@ -83,44 +97,54 @@
           <span class="info_key">{{ t("settings_label_installed_version") }}</span>
           <span class="info_value">
             {{
-              store.ffmpegStatus?.installed_version
-                || (store.dependencyStatus?.ffmpeg.exists ? t("settings_installed_unchecked") : t("common_not_installed"))
+              systemStore.ffmpegStatus?.installed_version
+                || (systemStore.dependencyStatus?.ffmpeg.exists ? t("settings_installed_unchecked") : t("common_not_installed"))
             }}
           </span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_latest_release_id") }}</span>
-          <span class="info_value">{{ store.ffmpegStatus?.latest_release_id ?? t("common_dash") }}</span>
+          <span class="info_value">{{ systemStore.ffmpegStatus?.latest_release_id ?? t("common_dash") }}</span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_latest_published_at") }}</span>
-          <span class="info_value">{{ store.ffmpegStatus?.latest_published_at || t("common_dash") }}</span>
+          <span class="info_value">{{ systemStore.ffmpegStatus?.latest_published_at || t("common_dash") }}</span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_local_release_id") }}</span>
-          <span class="info_value">{{ store.ffmpegStatus?.local_release_id ?? t("common_unknown") }}</span>
+          <span class="info_value">{{ systemStore.ffmpegStatus?.local_release_id ?? t("common_unknown") }}</span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_need_update") }}</span>
           <span class="info_value">
             {{
-              store.ffmpegStatus == null
+              systemStore.ffmpegStatus == null
                 ? t("common_dash")
-                : (store.ffmpegStatus.has_update ? t("common_yes") : t("common_no"))
+                : (systemStore.ffmpegStatus.has_update ? t("common_yes") : t("common_no"))
             }}
           </span>
         </div>
         <div class="info_row">
           <span class="info_key">{{ t("settings_label_binary_path") }}</span>
-          <span class="info_value long">{{ store.ffmpegStatus?.binary_path || store.dependencyStatus?.ffmpeg.path || t("common_dash") }}</span>
+          <span class="info_value long">{{
+            systemStore.ffmpegStatus?.binary_path || systemStore.dependencyStatus?.ffmpeg.path || t("common_dash")
+          }}</span>
         </div>
       </div>
       <div class="row">
-        <button class="btn-secondary" @click="checkFfmpeg" :disabled="store.isCheckingFfmpeg || store.isUpdatingFfmpeg">
-          {{ store.isCheckingFfmpeg ? t("settings_button_checking") : t("settings_button_check_update") }}
+        <button
+          class="btn-secondary"
+          @click="checkFfmpeg"
+          :disabled="systemStore.isCheckingFfmpeg || systemStore.isUpdatingFfmpeg"
+        >
+          {{ systemStore.isCheckingFfmpeg ? t("settings_button_checking") : t("settings_button_check_update") }}
         </button>
-        <button class="btn-primary" @click="updateFfmpeg" :disabled="store.isUpdatingFfmpeg || store.isCheckingFfmpeg">
-          {{ store.isUpdatingFfmpeg ? t("settings_button_updating") : t("settings_button_update_ffmpeg") }}
+        <button
+          class="btn-primary"
+          @click="updateFfmpeg"
+          :disabled="systemStore.isUpdatingFfmpeg || systemStore.isCheckingFfmpeg"
+        >
+          {{ systemStore.isUpdatingFfmpeg ? t("settings_button_updating") : t("settings_button_update_ffmpeg") }}
         </button>
       </div>
     </article>
@@ -131,36 +155,38 @@
 
 <script setup lang="ts">
 import { onMounted } from "vue";
-import { useTaskStore } from "@/stores/tasks";
+import { useSettingsStore } from "@/stores/settings";
+import { useSystemStore } from "@/stores/system";
 import { t } from "@/i18n/strings";
 
 // 设置页用于展示“依赖组件可用性”和“一键更新”能力。
 const backendUrl = "http://127.0.0.1:8000";
-const store = useTaskStore();
+const settingsStore = useSettingsStore();
+const systemStore = useSystemStore();
 
 onMounted(async () => {
   // 进入设置页时：读取本地依赖状态 + 读取应用设置（并发下载等）。
-  await Promise.all([store.refreshDependencyStatus(), store.refreshAppSettings()]);
+  await Promise.all([systemStore.refreshDependencyStatus(), settingsStore.refreshAppSettings()]);
 });
 
 async function checkYtDlp() {
-  await store.refreshYtDlpStatus();
+  await systemStore.refreshYtDlpStatus();
 }
 
 async function updateYtDlp() {
-  await store.updateYtDlp();
+  await systemStore.updateYtDlp();
 }
 
 async function checkFfmpeg() {
-  await store.refreshFfmpegStatus();
+  await systemStore.refreshFfmpegStatus();
 }
 
 async function updateFfmpeg() {
-  await store.updateFfmpeg();
+  await systemStore.updateFfmpeg();
 }
 
 async function saveSettings() {
-  await store.saveAppSettings();
+  await settingsStore.saveAppSettings();
 }
 </script>
 

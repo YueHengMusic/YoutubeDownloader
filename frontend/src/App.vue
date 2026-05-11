@@ -1,175 +1,78 @@
 <template>
   <div class="app-shell">
-    <header ref="primaryNavRef" class="primary-nav">
-      <div class="nav-inner">
-        <div class="brand-group">
-          <div class="brand-dot">{{ t("app_brand_short") }}</div>
-          <span class="brand-title">{{ t("app_brand_title") }}</span>
-          <RouterLink class="nav-link" to="/download">{{ t("nav_download") }}</RouterLink>
-          <RouterLink class="nav-link" to="/queue">{{ t("nav_queue") }}</RouterLink>
-          <RouterLink class="nav-link" to="/history">{{ t("nav_history") }}</RouterLink>
-          <RouterLink class="nav-link" to="/settings">{{ t("nav_settings") }}</RouterLink>
-        </div>
-        <div class="nav-actions">
-          <div class="lang-switch">
-            <span class="lang-label">{{ t("nav_language_label") }}</span>
-            <div class="lang-pill-group">
-              <button class="lang-pill" :class="{ active: locale_ref === 'zh-CN' }" type="button" @click="setLocale('zh-CN')">
-                {{ t("nav_language_zh_cn") }}
-              </button>
-              <button class="lang-pill" :class="{ active: locale_ref === 'en' }" type="button" @click="setLocale('en')">
-                {{ t("nav_language_en") }}
-              </button>
-            </div>
+    <aside class="side-nav">
+      <div class="side-brand">
+        <div class="brand-dot">{{ t("app_brand_short") }}</div>
+        <span class="brand-title">{{ t("app_brand_title") }}</span>
+      </div>
+      <nav class="side-links">
+        <RouterLink class="nav-link" to="/download">{{ t("nav_download") }}</RouterLink>
+        <RouterLink class="nav-link" to="/queue">{{ t("nav_queue") }}</RouterLink>
+        <RouterLink class="nav-link" to="/history">{{ t("nav_history") }}</RouterLink>
+        <RouterLink class="nav-link" to="/logs">{{ t("nav_logs") }}</RouterLink>
+        <RouterLink class="nav-link" to="/settings">{{ t("nav_settings") }}</RouterLink>
+        <RouterLink class="nav-link" to="/about">{{ t("nav_about") }}</RouterLink>
+      </nav>
+      <div class="side-actions">
+        <div class="lang-switch">
+          <span class="lang-label">{{ t("nav_language_label") }}</span>
+          <div class="lang-pill-group">
+            <button class="lang-pill" :class="{ active: locale_ref === 'zh-CN' }" type="button" @click="setLocale('zh-CN')">
+              {{ t("nav_language_zh_cn") }}
+            </button>
+            <button class="lang-pill" :class="{ active: locale_ref === 'en' }" type="button" @click="setLocale('en')">
+              {{ t("nav_language_en") }}
+            </button>
           </div>
-          <button class="terminal-toggle" type="button" :class="{ active: store.terminalPanelVisible }" @click="store.toggleTerminalPanel()">
-            {{ store.terminalPanelVisible ? t("nav_terminal_hide") : t("nav_terminal_show") }}
-          </button>
         </div>
       </div>
-    </header>
+    </aside>
 
-    <main class="page">
-      <section v-if="store.notice.visible" class="notice" :style="{ top: `${notice_top}px` }" :data-type="store.notice.type">
-        <span>{{ store.notice.message }}</span>
+    <div class="workspace">
+      <section v-if="uiStore.notice.visible" class="notice" :data-type="uiStore.notice.type">
+        <span>{{ uiStore.notice.message }}</span>
       </section>
-
-      <section class="hero">
-        <h1>{{ t("hero_title") }}</h1>
-        <p>{{ t("hero_subtitle") }}</p>
-      </section>
-
-      <section class="page-content">
-        <RouterView />
-      </section>
-    </main>
-
-    <footer class="app-footer">
-      <div v-if="store.terminalPanelVisible" class="terminal-card">
-        <div class="terminal-header">
-          <strong>{{ t("terminal_title") }}</strong>
-          <button type="button" class="terminal-clear" @click="store.clearTerminalLogs()">
-            {{ t("terminal_clear") }}
-          </button>
-        </div>
-        <div ref="terminalBodyRef" class="terminal-body">
-          <p v-if="store.terminalLogs.length === 0" class="terminal-empty">{{ t("terminal_empty") }}</p>
-          <p v-for="line in store.terminalLogs" :key="line.id" class="terminal-line">
-            <span class="terminal-meta">[{{ formatTime(line.created_at) }}] [{{ line.task_id.slice(0, 8) }}] [{{ terminalStreamLabel(line.stream) }}]</span>
-            <span class="terminal-text">{{ line.text }}</span>
-          </p>
-        </div>
-      </div>
-      <div class="copyright-card">
-        <p class="copyright-line">{{ t("footer_copyright", { year: currentYear }) }}</p>
-        <p class="copyright-line">{{ t("footer_contact") }}</p>
-        <p class="copyright-line">
-          <span>{{ t("footer_based_on_prefix") }}</span>
-          <a href="#" @click.prevent="openYtDlpRepo">{{ t("footer_based_on_link_text") }}</a>
-          <span>{{ t("footer_based_on_suffix") }}</span>
-        </p>
-      </div>
-    </footer>
+      <main class="page">
+        <section class="page-content">
+          <RouterView />
+        </section>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { useTaskStore } from "@/stores/tasks";
+import { onBeforeUnmount, onMounted, watch } from "vue";
+import { useRealtimeTaskStore } from "@/stores/realtime";
+import { useUiStore } from "@/stores/ui";
 import { locale_ref, setLocale, t } from "@/i18n/strings";
-import type { TerminalStreamType } from "@/stores/tasks";
 
-const store = useTaskStore();
+const uiStore = useUiStore();
+const realtimeStore = useRealtimeTaskStore();
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
-const terminalBodyRef = ref<HTMLElement | null>(null);
-const primaryNavRef = ref<HTMLElement | null>(null);
-const yt_dlp_repo_url = "https://github.com/yt-dlp/yt-dlp";
-const currentYear = new Date().getFullYear();
-const notice_top = ref(70);
-let nav_resize_observer: ResizeObserver | null = null;
-
-/**
- * 根据 header 实际高度计算提示浮层顶部偏移。
- * 这样在窄屏换行或语言切换时，提示都不会遮挡导航。
- */
-function update_notice_top() {
-  const header_height = primaryNavRef.value?.getBoundingClientRect().height ?? 56;
-  notice_top.value = Math.round(header_height + 10);
-}
 
 watch(
-  () => `${store.notice.visible}:${store.notice.nonce}`,
+  () => `${uiStore.notice.visible}:${uiStore.notice.nonce}`,
   () => {
     if (noticeTimer) {
       clearTimeout(noticeTimer);
       noticeTimer = null;
     }
-    if (!store.notice.visible) return;
+    if (!uiStore.notice.visible) return;
     // 提示自动消失，不需要手动关闭；新提示到来会重置计时。
     noticeTimer = setTimeout(() => {
-      store.clearNotice();
+      uiStore.clearNotice();
     }, 3200);
   }
 );
 
-watch(
-  () => store.terminalLogs.length,
-  async () => {
-    if (!store.terminalPanelVisible) return;
-    // 新日志到达时自动滚动到底部，避免用户手动追踪最新输出。
-    await nextTick();
-    if (terminalBodyRef.value) {
-      terminalBodyRef.value.scrollTop = terminalBodyRef.value.scrollHeight;
-    }
-  }
-);
-
-function terminalStreamLabel(stream: TerminalStreamType): string {
-  if (stream === "command") return t("terminal_stream_command");
-  if (stream === "status") return t("terminal_stream_status");
-  return t("terminal_stream_stdout");
-}
-
-function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString();
-}
-
-async function openYtDlpRepo() {
-  try {
-    const ok = await window.desktopAPI?.openExternalUrl?.(yt_dlp_repo_url);
-    if (ok) return;
-  } catch {
-    // ignore
-  }
-  const popupWindow = window.open(yt_dlp_repo_url, "_blank", "noopener,noreferrer");
-  if (!popupWindow) window.location.href = yt_dlp_repo_url;
-}
-
 onBeforeUnmount(() => {
   if (noticeTimer) clearTimeout(noticeTimer);
-  window.removeEventListener("resize", update_notice_top);
-  if (nav_resize_observer) {
-    nav_resize_observer.disconnect();
-    nav_resize_observer = null;
-  }
 });
 
 onMounted(() => {
   // 全局壳组件启动时就连接 WS，确保在任意页面都能收到实时终端输出。
-  store.connectWs();
-  /**
-   * 提示浮层位置跟随 header 实时计算：
-   * - 保证提示始终出现在 header 下方，不遮挡导航内容；
-   * - 兼容小屏换行、语言切换等导致的 header 高度变化。
-   */
-  update_notice_top();
-  window.addEventListener("resize", update_notice_top);
-  nav_resize_observer = new ResizeObserver(() => {
-    update_notice_top();
-  });
-  if (primaryNavRef.value) {
-    nav_resize_observer.observe(primaryNavRef.value);
-  }
+  realtimeStore.connectWs();
 });
 </script>
 
@@ -225,35 +128,10 @@ a {
 
 <style scoped>
 .app-shell {
-  min-height: 100vh;
-  background: var(--canvas);
-}
-
-.primary-nav {
-  min-height: 56px;
-  border-bottom: 1px solid var(--hairline);
-  background: var(--canvas);
-}
-
-.nav-inner {
-  min-height: 56px;
-  max-width: var(--layout_max_width);
-  margin: 0 auto;
-  padding: 8px 20px;
+  height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: nowrap;
-}
-
-.brand-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: nowrap;
-  min-width: 0;
-  flex: 1 1 auto;
+  background: var(--canvas);
+  overflow: hidden;
 }
 
 .brand-dot {
@@ -267,57 +145,82 @@ a {
   font-weight: 600;
 }
 
+.side-nav {
+  flex: 0 0 236px;
+  width: 236px;
+  height: 100vh;
+  border-right: 1px solid var(--hairline);
+  background: var(--surface-soft);
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /**
+   * 侧边栏固定在视口内：
+   * - 不跟随右侧页面内容滚动；
+   * - 右侧内容很长时，语言切换与终端开关仍停留在侧边栏底部可见位置。
+   */
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+}
+
+.side-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 8px;
+}
+
 .brand-title {
   font-size: 14px;
   font-weight: 600;
-  margin-right: 8px;
+}
+
+.side-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .nav-link {
   font-size: 14px;
   text-decoration: none;
-  white-space: nowrap;
+  color: var(--ink);
+  height: var(--control_height);
+  border-radius: 10px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+}
+
+.nav-link.router-link-active {
+  border: 1px solid var(--hairline-strong);
+  background: var(--canvas);
 }
 
 .lang-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.nav-actions {
-  display: inline-flex;
-  align-items: center;
+.side-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  flex-wrap: nowrap;
-  justify-content: flex-end;
-  flex: 0 0 auto;
-}
-
-.terminal-toggle {
-  min-width: 96px;
-  height: var(--control_height);
-  border: 1px solid var(--hairline);
-  border-radius: 9999px;
-  background: var(--canvas);
-  color: var(--body);
-  padding: 0 12px;
-  cursor: pointer;
-}
-
-.terminal-toggle.active {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
 }
 
 .lang-label {
   color: var(--body);
   font-size: 12px;
+  padding-left: 4px;
 }
 
 .lang-pill-group {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   border: 1px solid var(--hairline);
   border-radius: 9999px;
@@ -326,7 +229,8 @@ a {
 }
 
 .lang-pill {
-  min-width: 68px;
+  flex: 1;
+  min-width: 64px;
   height: var(--control_height);
   border: 0;
   border-radius: 9999px;
@@ -342,15 +246,22 @@ a {
   color: var(--ink);
 }
 
-.page {
-  max-width: var(--layout_max_width);
-  margin: 0 auto;
-  padding: 24px 20px 32px;
+.workspace {
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /**
+   * 仅右侧工作区滚动，避免整个应用一起滚动导致“侧边栏跟着跑”。
+   */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .notice {
   position: fixed;
-  top: 14px;
+  bottom: 14px;
   right: 14px;
   z-index: 50;
   border: 1px solid var(--hairline);
@@ -365,6 +276,14 @@ a {
   background: #ffffff;
 }
 
+.page {
+  flex: 1;
+  max-width: var(--layout_max_width);
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 20px 32px;
+}
+
 .notice[data-type="success"] {
   border-color: #bbf7d0;
   background: #f0fdf4;
@@ -375,191 +294,51 @@ a {
   background: #fef2f2;
 }
 
-.hero {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.hero h1 {
-  margin: 0 0 8px;
-  font-size: 36px;
-  line-height: 1.11;
-  font-weight: 500;
-  font-family: "SF Pro Rounded", ui-rounded, ui-sans-serif, system-ui, sans-serif;
-  word-break: break-word;
-}
-
-.hero p {
-  margin: 0;
-  color: var(--body);
-  font-size: 16px;
-}
-
 .page-content {
   border: 1px solid var(--hairline);
   border-radius: 12px;
   padding: var(--card_padding);
 }
 
-.app-footer {
-  max-width: var(--layout_max_width);
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 0 20px 24px;
-}
 
-.terminal-card {
-  background: var(--canvas);
-  border: 1px solid var(--hairline);
-  border-radius: 12px;
-  padding: var(--card_padding_compact);
-}
-
-.terminal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--hairline);
-  font-size: 14px;
-}
-
-.terminal-clear {
-  border: 1px solid var(--hairline);
-  border-radius: 9999px;
-  background: var(--canvas);
-  color: var(--ink);
-  height: var(--control_height);
-  padding: 0 10px;
-  cursor: pointer;
-}
-
-.terminal-body {
-  margin-top: 12px;
-  max-height: 220px;
-  overflow: auto;
-  padding: 0;
-  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.terminal-empty {
-  margin: 0;
-  color: var(--mute);
-}
-
-.terminal-line {
-  margin: 0 0 6px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 8px;
-}
-
-.terminal-meta {
-  color: var(--body);
-  flex: 0 0 auto;
-}
-
-.terminal-text {
-  color: var(--ink);
-  flex: 1 1 260px;
-  word-break: break-word;
-}
-
-.copyright-card {
-  border: 1px solid var(--hairline);
-  border-radius: 12px;
-  padding: var(--card_padding_compact);
-  background: var(--canvas);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: center;
-  text-align: center;
-}
-
-.copyright-line {
-  margin: 0;
-  font-size: 13px;
-  color: var(--body);
-  overflow-wrap: anywhere;
-}
-
-.copyright-line a {
-  color: var(--ink);
-  text-decoration: underline;
-}
-
-@media (max-width: 900px) {
-  /* 中等宽度：允许导航自动换行，但不强制上下分层。 */
-  .nav-inner {
-    flex-wrap: wrap;
-  }
-  .brand-group {
-    flex-wrap: wrap;
-  }
-  .nav-actions {
-    flex-wrap: wrap;
+@media (max-width: 1080px) {
+  .side-nav {
+    flex-basis: 212px;
+    width: 212px;
   }
 }
 
 @media (max-width: 840px) {
-  .nav-inner {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-  .hero h1 {
-    font-size: 28px;
-  }
-  .brand-title {
-    display: none;
-  }
-  .lang-label {
-    display: none;
-  }
   .notice {
+    bottom: 12px;
     left: 12px;
     right: 12px;
     min-width: 0;
     max-width: none;
   }
-  .app-footer {
-    padding-bottom: 16px;
-  }
 }
 
 @media (max-width: 560px) {
-  /* 极窄窗口下才固定分层，确保可点区域与可读性。 */
-  .primary-nav {
-    padding-bottom: 4px;
+  .app-shell {
+    flex-direction: column;
   }
-  .nav-inner {
-    align-items: flex-start;
+  .side-nav {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--hairline);
+    padding: 12px;
     gap: 10px;
   }
-  .brand-group {
-    width: 100%;
-    flex: 1 1 100%;
-    gap: 6px 10px;
+  .side-links {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
   }
-  .nav-actions {
-    width: 100%;
-    flex: 1 1 100%;
-    justify-content: space-between;
-    gap: 8px;
+  .nav-link {
+    width: calc(50% - 3px);
   }
-  .lang-switch {
-    min-width: 0;
-  }
-  .lang-pill-group {
-    max-width: 100%;
-  }
-  .lang-pill {
-    min-width: 58px;
-    padding: 0 8px;
+  .side-actions {
+    margin-top: 0;
   }
   .page {
     padding-left: 12px;
@@ -567,28 +346,6 @@ a {
   }
   .page-content {
     padding: var(--card_padding_compact);
-  }
-  .brand-group {
-    gap: 8px;
-  }
-  .nav-link {
-    font-size: 13px;
-  }
-  .terminal-toggle {
-    height: var(--control_height_compact);
-    padding: 0 10px;
-  }
-  .app-footer {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-  .terminal-header {
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .terminal-clear {
-    width: 100%;
-    height: var(--control_height_compact);
   }
 }
 </style>

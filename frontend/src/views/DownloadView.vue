@@ -1,6 +1,19 @@
 <template>
   <section class="section">
-    <h2>{{ t("download_title") }}</h2>
+    <div class="head">
+      <h2>{{ t("download_title") }}</h2>
+      <div class="mode-switch">
+        <span class="mode-label">{{ t("download_mode_label") }}</span>
+        <div class="mode-pill-group">
+          <button class="mode-pill" :class="{ active: formMode === 'simple' }" type="button" @click="formMode = 'simple'">
+            {{ t("download_mode_simple") }}
+          </button>
+          <button class="mode-pill" :class="{ active: formMode === 'advanced' }" type="button" @click="formMode = 'advanced'">
+            {{ t("download_mode_advanced") }}
+          </button>
+        </div>
+      </div>
+    </div>
     <p class="desc">{{ t("download_desc") }}</p>
 
     <form @submit.prevent="submit">
@@ -13,11 +26,13 @@
         <button class="btn-secondary" type="button" @click="pickDir">{{ t("common_select") }}</button>
       </div>
 
-      <label>{{ t("download_label_format_id") }}</label>
-      <input v-model="formatId" :placeholder="t('download_placeholder_format_id')" />
+      <template v-if="formMode === 'advanced'">
+        <label>{{ t("download_label_format_id") }}</label>
+        <input v-model="formatId" :placeholder="t('download_placeholder_format_id')" />
 
-      <label>{{ t("download_label_resolution") }}</label>
-      <input v-model="resolution" :placeholder="t('download_placeholder_resolution')" />
+        <label>{{ t("download_label_resolution") }}</label>
+        <input v-model="resolution" :placeholder="t('download_placeholder_resolution')" />
+      </template>
 
       <div class="label_with_tip">
         <label>{{ t("download_label_cookie_mode") }}</label>
@@ -53,13 +68,15 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useTaskStore } from "@/stores/tasks";
+import { useTaskRuntimeStore } from "@/stores/taskRuntime";
 import { t } from "@/i18n/strings";
 import UiSelect, { type UiSelectOption } from "@/components/UiSelect.vue";
 
 type CookieMode = "none" | "file" | "browser";
+type DownloadFormMode = "simple" | "advanced";
 
 type DownloadFormDraft = {
+  formMode: DownloadFormMode;
   outputDir: string;
   formatId: string;
   resolution: string;
@@ -79,6 +96,7 @@ function load_form_draft(): DownloadFormDraft {
     const raw = localStorage.getItem(FORM_STORAGE_KEY);
     if (!raw) {
       return {
+        formMode: "simple",
         outputDir: ".",
         formatId: "",
         resolution: "",
@@ -87,16 +105,19 @@ function load_form_draft(): DownloadFormDraft {
       };
     }
     const parsed = JSON.parse(raw) as Partial<DownloadFormDraft>;
-    const mode: CookieMode = parsed.cookieMode === "file" || parsed.cookieMode === "browser" ? parsed.cookieMode : "none";
+    const formMode: DownloadFormMode = parsed.formMode === "advanced" ? "advanced" : "simple";
+    const cookieMode: CookieMode = parsed.cookieMode === "file" || parsed.cookieMode === "browser" ? parsed.cookieMode : "none";
     return {
+      formMode,
       outputDir: parsed.outputDir || ".",
       formatId: parsed.formatId || "",
       resolution: parsed.resolution || "",
-      cookieMode: mode,
+      cookieMode,
       cookieValue: parsed.cookieValue || ""
     };
   } catch {
     return {
+      formMode: "simple",
       outputDir: ".",
       formatId: "",
       resolution: "",
@@ -111,9 +132,10 @@ function save_form_draft(draft: DownloadFormDraft) {
 }
 
 // 这个页面的表单状态（每个输入框都对应一个响应式变量）。
-const store = useTaskStore();
+const store = useTaskRuntimeStore();
 const initialDraft = load_form_draft();
 const url = ref("");
+const formMode = ref<DownloadFormMode>(initialDraft.formMode);
 const outputDir = ref(initialDraft.outputDir);
 const formatId = ref(initialDraft.formatId);
 const resolution = ref(initialDraft.resolution);
@@ -131,8 +153,9 @@ const cookie_browser_options = computed<UiSelectOption[]>(() => [
   { value: "edge", label: t("download_cookie_browser_edge") }
 ]);
 
-watch([outputDir, formatId, resolution, cookieMode, cookieValue], () => {
+watch([formMode, outputDir, formatId, resolution, cookieMode, cookieValue], () => {
   save_form_draft({
+    formMode: formMode.value,
     outputDir: outputDir.value,
     formatId: formatId.value,
     resolution: resolution.value,
@@ -205,6 +228,14 @@ async function submit() {
   gap: 16px;
 }
 
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 h2 {
   margin: 0;
   font-size: 24px;
@@ -217,6 +248,44 @@ h2 {
   margin: 0;
   font-size: 14px;
   color: var(--body);
+}
+
+.mode-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mode-label {
+  color: var(--body);
+  font-size: 12px;
+}
+
+.mode-pill-group {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--hairline);
+  border-radius: 9999px;
+  padding: 2px;
+  background: var(--surface-soft);
+}
+
+.mode-pill {
+  min-width: 64px;
+  height: var(--control_height);
+  border: 0;
+  border-radius: 9999px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--body);
+  cursor: pointer;
+}
+
+.mode-pill.active {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
 }
 
 form {
@@ -336,6 +405,16 @@ input:focus {
 }
 
 @media (max-width: 560px) {
+  .head {
+    align-items: stretch;
+  }
+  .mode-switch {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .mode-pill {
+    height: var(--control_height_compact);
+  }
   /* 小屏下保持标签和提示按钮同行，避免提示按钮被挤到下一行影响可发现性。 */
   .label_with_tip {
     justify-content: space-between;

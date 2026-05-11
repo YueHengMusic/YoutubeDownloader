@@ -86,8 +86,12 @@ async function isDevServerAvailable(url: string): Promise<boolean> {
 async function createWindow(): Promise<void> {
   const windowIcon = loadWindowIcon();
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    // 按用户要求：默认以最小尺寸启动，避免初始窗口过大。
+    width: 960,
+    height: 780,
+    // 最小高度需要覆盖下载页完整表单，避免底部操作区被裁切。
+    minWidth: 960,
+    minHeight: 780,
     icon: windowIcon,
     autoHideMenuBar: true,
     webPreferences: {

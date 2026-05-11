@@ -1,11 +1,13 @@
-# YoutubeDownloader（yt-dlp GUI 桌面版）
+# YouTubeDownloader（yt-dlp GUI 桌面版）
 
 这是一个基于 `Electron + Vue3 + FastAPI` 的桌面应用，目标是把 `yt-dlp` 的命令行能力做成图形界面，方便新手使用。
 
 ## 你会得到什么
 - 图形化创建下载任务（链接、格式、分辨率、Cookie）
 - 下载队列与实时状态
+- 日志页面（统一查看终端命令与输出）
 - 历史记录（本地 SQLite）
+- 关于页面（项目说明、作者联系方式、上游仓库链接）
 - `yt-dlp` 自动下载/更新（GitHub Release）
 - `ffmpeg` 自动下载/更新（GitHub Release）
 - 跨平台打包能力（Windows/macOS/Linux）

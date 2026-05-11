@@ -3,10 +3,13 @@ import {
   apiClient,
   connectTaskWs,
   fetchDependencyStatus,
+  fetchAppSettings,
   fetchFfmpegUpdateStatus,
   fetchYtDlpUpdateStatus,
   triggerFfmpegUpdate,
   triggerYtDlpUpdate,
+  updateAppSettings,
+  type AppSettings,
   type CreateTaskPayload,
   type DependencyStatus,
   type FfmpegUpdateStatus,
@@ -50,6 +53,7 @@ export const useTaskStore = defineStore("tasks", {
     ytDlpStatus: null as YtDlpUpdateStatus | null,
     ffmpegStatus: null as FfmpegUpdateStatus | null,
     dependencyStatus: null as DependencyStatus | null,
+    appSettings: null as AppSettings | null,
     notice: {
       visible: false,
       type: "info" as NoticeType,
@@ -64,6 +68,9 @@ export const useTaskStore = defineStore("tasks", {
     isCheckingFfmpeg: false,
     isUpdatingFfmpeg: false,
     isCheckingDependencyStatus: false,
+    isRefreshingAppSettings: false,
+    isSavingAppSettings: false,
+    downloadConcurrencyInput: 2,
     // 终端面板默认开启，用户进入应用时可立即看到后台执行输出。
     terminalPanelVisible: true,
     terminalLogs: [] as TerminalLogLine[],
@@ -352,6 +359,35 @@ export const useTaskStore = defineStore("tasks", {
         this.showNotice("error", t("notice_dependency_check_failed", { error: this.extractErrorMessage(error) }));
       } finally {
         this.isCheckingDependencyStatus = false;
+      }
+    },
+    async refreshAppSettings() {
+      this.isRefreshingAppSettings = true;
+      try {
+        this.appSettings = await this.runWithRetryOnceOnTimeout(() => fetchAppSettings());
+        this.downloadConcurrencyInput = this.appSettings.download_concurrency;
+      } catch (error) {
+        this.showNotice("error", t("notice_settings_load_failed", { error: this.extractErrorMessage(error) }));
+      } finally {
+        this.isRefreshingAppSettings = false;
+      }
+    },
+    async saveAppSettings() {
+      this.isSavingAppSettings = true;
+      try {
+        const minValue = this.appSettings?.min_download_concurrency ?? 1;
+        const maxValue = this.appSettings?.max_download_concurrency ?? 20;
+        const defaultValue = this.appSettings?.default_download_concurrency ?? 2;
+        const parsedValue = Number(this.downloadConcurrencyInput);
+        const safeValue = Number.isFinite(parsedValue) ? parsedValue : defaultValue;
+        const nextValue = Math.min(maxValue, Math.max(minValue, Math.trunc(safeValue)));
+        this.appSettings = await this.runWithRetryOnceOnTimeout(() => updateAppSettings(nextValue));
+        this.downloadConcurrencyInput = this.appSettings.download_concurrency;
+        this.showNotice("success", t("notice_settings_save_success"));
+      } catch (error) {
+        this.showNotice("error", t("notice_settings_save_failed", { error: this.extractErrorMessage(error) }));
+      } finally {
+        this.isSavingAppSettings = false;
       }
     }
   }

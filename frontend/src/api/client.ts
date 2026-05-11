@@ -46,6 +46,13 @@ export type DependencyStatus = {
   };
 };
 
+export type AppSettings = {
+  download_concurrency: number;
+  min_download_concurrency: number;
+  max_download_concurrency: number;
+  default_download_concurrency: number;
+};
+
 // 下载任务实时进度 websocket 连接入口。
 export function connectTaskWs(onMessage: (data: any) => void): WebSocket {
   const ws = new WebSocket("ws://127.0.0.1:8000/ws/tasks");
@@ -81,5 +88,17 @@ export async function triggerFfmpegUpdate(): Promise<Record<string, unknown>> {
 
 export async function fetchDependencyStatus(): Promise<DependencyStatus> {
   const { data } = await apiClient.get<DependencyStatus>("/api/system/dependencies");
+  return data;
+}
+
+export async function fetchAppSettings(): Promise<AppSettings> {
+  const { data } = await apiClient.get<AppSettings>("/api/system/settings");
+  return data;
+}
+
+export async function updateAppSettings(downloadConcurrency: number): Promise<AppSettings> {
+  const { data } = await apiClient.put<AppSettings>("/api/system/settings", {
+    download_concurrency: downloadConcurrency
+  });
   return data;
 }

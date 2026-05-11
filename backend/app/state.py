@@ -11,6 +11,7 @@ from app.core.yt_dlp_updater import YtDlpUpdater
 from app.core.yt_dlp_runner import YtDlpRunner
 from app.models.task import DownloadTask
 from app.storage.history_repo import HistoryRepository
+from app.storage.settings_repo import SettingsRepository
 
 
 @dataclass
@@ -24,6 +25,7 @@ class AppState:
     yt_dlp_updater: YtDlpUpdater
     ffmpeg_updater: FfmpegUpdater
     queue_manager: QueueManager
+    settings_repo: SettingsRepository
 
 
 app_state: AppState | None = None
@@ -36,6 +38,7 @@ def init_state() -> AppState:
     backend_root = root if (root / "app").exists() else root / "backend"
     binary_locator = BinaryLocator(base_dir=root)
     history_repo = HistoryRepository(db_path=backend_root / "data" / "history.db")
+    settings_repo = SettingsRepository(settings_path=backend_root / "data" / "settings.json")
     event_bus = EventBus()
     yt_dlp_updater = YtDlpUpdater(
         yt_dlp_path=binary_locator.get_yt_dlp_path(),
@@ -58,7 +61,12 @@ def init_state() -> AppState:
         history_repo.upsert_task(task)
         await event_bus.publish({"type": "task_update", "data": task.model_dump(mode="json")})
 
-    queue_manager = QueueManager(runner=runner.run, on_update=on_update, concurrency=2)
+    # 并发下载数从用户设置读取，默认 2，上限由设置仓库统一约束。
+    queue_manager = QueueManager(
+        runner=runner.run,
+        on_update=on_update,
+        concurrency=settings_repo.get_download_concurrency(),
+    )
     return AppState(
         binary_locator=binary_locator,
         history_repo=history_repo,
@@ -67,4 +75,5 @@ def init_state() -> AppState:
         yt_dlp_updater=yt_dlp_updater,
         ffmpeg_updater=ffmpeg_updater,
         queue_manager=queue_manager,
+        settings_repo=settings_repo,
     )

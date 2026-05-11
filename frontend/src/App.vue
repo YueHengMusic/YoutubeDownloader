@@ -44,8 +44,8 @@
       </section>
     </main>
 
-    <footer v-if="store.terminalPanelVisible" class="terminal-footer">
-      <div class="terminal-card">
+    <footer class="app-footer">
+      <div v-if="store.terminalPanelVisible" class="terminal-card">
         <div class="terminal-header">
           <strong>{{ t("terminal_title") }}</strong>
           <button type="button" class="terminal-clear" @click="store.clearTerminalLogs()">
@@ -60,6 +60,15 @@
           </p>
         </div>
       </div>
+      <div class="copyright-card">
+        <p class="copyright-line">{{ t("footer_copyright", { year: currentYear }) }}</p>
+        <p class="copyright-line">{{ t("footer_contact") }}</p>
+        <p class="copyright-line">
+          <span>{{ t("footer_based_on_prefix") }}</span>
+          <a href="#" @click.prevent="openYtDlpRepo">{{ t("footer_based_on_link_text") }}</a>
+          <span>{{ t("footer_based_on_suffix") }}</span>
+        </p>
+      </div>
     </footer>
   </div>
 </template>
@@ -73,6 +82,8 @@ import type { TerminalStreamType } from "@/stores/tasks";
 const store = useTaskStore();
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
 const terminalBodyRef = ref<HTMLElement | null>(null);
+const yt_dlp_repo_url = "https://github.com/yt-dlp/yt-dlp";
+const currentYear = new Date().getFullYear();
 
 watch(
   () => `${store.notice.visible}:${store.notice.nonce}`,
@@ -109,6 +120,17 @@ function terminalStreamLabel(stream: TerminalStreamType): string {
 
 function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleTimeString();
+}
+
+async function openYtDlpRepo() {
+  try {
+    const ok = await window.desktopAPI?.openExternalUrl?.(yt_dlp_repo_url);
+    if (ok) return;
+  } catch {
+    // ignore
+  }
+  const popupWindow = window.open(yt_dlp_repo_url, "_blank", "noopener,noreferrer");
+  if (!popupWindow) window.location.href = yt_dlp_repo_url;
 }
 
 onBeforeUnmount(() => {
@@ -329,9 +351,12 @@ a {
   padding: 24px;
 }
 
-.terminal-footer {
+.app-footer {
   max-width: 760px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 0 20px 24px;
 }
 
@@ -389,6 +414,29 @@ a {
   color: var(--ink);
 }
 
+.copyright-card {
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: var(--canvas);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  text-align: center;
+}
+
+.copyright-line {
+  margin: 0;
+  font-size: 13px;
+  color: var(--body);
+}
+
+.copyright-line a {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
 @media (max-width: 840px) {
   .hero h1 {
     font-size: 28px;
@@ -405,7 +453,7 @@ a {
     min-width: 0;
     max-width: none;
   }
-  .terminal-footer {
+  .app-footer {
     padding-bottom: 16px;
   }
 }

@@ -59,6 +59,9 @@ const ZH_CN: MessageDict = {
   notice_ffmpeg_update_success: "ffmpeg 已完成下载/更新",
   notice_ffmpeg_update_failed: "更新 ffmpeg 失败：{error}",
   notice_dependency_check_failed: "读取本地依赖状态失败：{error}",
+  notice_settings_load_failed: "读取应用设置失败：{error}",
+  notice_settings_save_success: "并发下载设置已保存",
+  notice_settings_save_failed: "保存应用设置失败：{error}",
 
   download_title: "创建下载任务",
   download_desc: "粘贴链接，选择输出目录与格式，然后加入队列。",
@@ -116,7 +119,12 @@ const ZH_CN: MessageDict = {
   settings_button_update_ytdlp: "下载/更新 yt-dlp",
   settings_button_update_ffmpeg: "下载/更新 ffmpeg",
   settings_button_updating: "下载中，请稍候...",
-  settings_meta: "后端地址：{backendUrl} ｜ 并发下载：2-3（后端配置）",
+  settings_button_saving: "保存中...",
+  settings_download_title: "下载并发设置",
+  settings_label_download_concurrency: "并发下载数量",
+  settings_download_concurrency_hint: "范围 {min}-{max}，默认 {defaultValue}。该设置会持久化保存并立即应用。",
+  settings_button_save: "保存设置",
+  settings_meta: "后端地址：{backendUrl}",
   settings_installed_unchecked: "已安装（未检查版本）",
 
   task_status_pending: "排队中",
@@ -129,7 +137,12 @@ const ZH_CN: MessageDict = {
   terminal_empty: "终端已开启，等待新的命令和输出...",
   terminal_stream_command: "命令",
   terminal_stream_stdout: "输出",
-  terminal_stream_status: "状态"
+  terminal_stream_status: "状态",
+  footer_copyright: "版权所有 © {year} YueHeng。保留所有权利。",
+  footer_contact: "联系方式 QQ:368950794",
+  footer_based_on_prefix: "本项目使用 ",
+  footer_based_on_link_text: "yt-dlp",
+  footer_based_on_suffix: "，仓库地址如链接所示。"
 };
 
 const EN: MessageDict = {
@@ -182,6 +195,9 @@ const EN: MessageDict = {
   notice_ffmpeg_update_success: "ffmpeg downloaded/updated",
   notice_ffmpeg_update_failed: "Failed to update ffmpeg: {error}",
   notice_dependency_check_failed: "Failed to read local dependency state: {error}",
+  notice_settings_load_failed: "Failed to load app settings: {error}",
+  notice_settings_save_success: "Concurrent download setting saved",
+  notice_settings_save_failed: "Failed to save app settings: {error}",
 
   download_title: "Create Download Task",
   download_desc: "Paste a URL, choose output and format, then enqueue it.",
@@ -239,7 +255,12 @@ const EN: MessageDict = {
   settings_button_update_ytdlp: "Download/Update yt-dlp",
   settings_button_update_ffmpeg: "Download/Update ffmpeg",
   settings_button_updating: "Downloading...",
-  settings_meta: "Backend: {backendUrl} | Concurrent downloads: 2-3 (backend configured)",
+  settings_button_saving: "Saving...",
+  settings_download_title: "Download Concurrency",
+  settings_label_download_concurrency: "Concurrent Downloads",
+  settings_download_concurrency_hint: "Range {min}-{max}, default {defaultValue}. This setting is persisted and applied immediately.",
+  settings_button_save: "Save Settings",
+  settings_meta: "Backend: {backendUrl}",
   settings_installed_unchecked: "Installed (version not checked)",
 
   task_status_pending: "Pending",
@@ -252,7 +273,12 @@ const EN: MessageDict = {
   terminal_empty: "Terminal is enabled. Waiting for new commands and logs...",
   terminal_stream_command: "CMD",
   terminal_stream_stdout: "OUT",
-  terminal_stream_status: "STATUS"
+  terminal_stream_status: "STATUS",
+  footer_copyright: "Copyright © {year} YueHeng. All rights reserved.",
+  footer_contact: "Contact QQ: 368950794",
+  footer_based_on_prefix: "This project uses ",
+  footer_based_on_link_text: "yt-dlp",
+  footer_based_on_suffix: " (repository linked)."
 };
 
 const DICTS: Record<Locale, MessageDict> = {

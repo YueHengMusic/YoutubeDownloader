@@ -4,6 +4,38 @@
     <p class="desc">{{ t("settings_desc") }}</p>
 
     <article class="card">
+      <h3>{{ t("settings_download_title") }}</h3>
+      <div class="info_list">
+        <div class="info_row">
+          <span class="info_key">{{ t("settings_label_download_concurrency") }}</span>
+          <span class="info_value">
+            <input
+              v-model.number="store.downloadConcurrencyInput"
+              class="input_number"
+              type="number"
+              :min="store.appSettings?.min_download_concurrency ?? 1"
+              :max="store.appSettings?.max_download_concurrency ?? 20"
+            />
+          </span>
+        </div>
+      </div>
+      <p class="card_hint">
+        {{
+          t("settings_download_concurrency_hint", {
+            min: store.appSettings?.min_download_concurrency ?? 1,
+            max: store.appSettings?.max_download_concurrency ?? 20,
+            defaultValue: store.appSettings?.default_download_concurrency ?? 2
+          })
+        }}
+      </p>
+      <div class="row">
+        <button class="btn-primary" @click="saveSettings" :disabled="store.isSavingAppSettings || store.isRefreshingAppSettings">
+          {{ store.isSavingAppSettings ? t("settings_button_saving") : t("settings_button_save") }}
+        </button>
+      </div>
+    </article>
+
+    <article class="card">
       <h3>{{ t("settings_ytdlp_title") }}</h3>
       <div class="info_list">
         <div class="info_row">
@@ -107,8 +139,8 @@ const backendUrl = "http://127.0.0.1:8000";
 const store = useTaskStore();
 
 onMounted(async () => {
-  // 进入设置页时仅做本地依赖存在性检查，不触发远程版本检测。
-  await store.refreshDependencyStatus();
+  // 进入设置页时：读取本地依赖状态 + 读取应用设置（并发下载等）。
+  await Promise.all([store.refreshDependencyStatus(), store.refreshAppSettings()]);
 });
 
 async function checkYtDlp() {
@@ -125,6 +157,10 @@ async function checkFfmpeg() {
 
 async function updateFfmpeg() {
   await store.updateFfmpeg();
+}
+
+async function saveSettings() {
+  await store.saveAppSettings();
 }
 </script>
 
@@ -190,6 +226,23 @@ h3 {
 
 .info_value.long {
   word-break: break-all;
+}
+
+.input_number {
+  width: 120px;
+  height: 36px;
+  border-radius: 9999px;
+  border: 1px solid var(--hairline-strong);
+  background: var(--canvas);
+  color: var(--ink);
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.card_hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--body);
 }
 
 .row {

@@ -4,10 +4,30 @@ import asyncio
 from typing import Callable
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 import app.state as state_module
+from app.storage.settings_repo import SettingsRepository
 
 router = APIRouter(prefix="/api/system", tags=["system"])
+
+
+class AppSettingsResponse(BaseModel):
+    """系统设置响应模型。"""
+
+    download_concurrency: int
+    min_download_concurrency: int
+    max_download_concurrency: int
+    default_download_concurrency: int
+
+
+class UpdateAppSettingsRequest(BaseModel):
+    """系统设置更新请求模型。"""
+
+    download_concurrency: int = Field(
+        ge=SettingsRepository.MIN_DOWNLOAD_CONCURRENCY,
+        le=SettingsRepository.MAX_DOWNLOAD_CONCURRENCY,
+    )
 
 
 def _build_terminal_callback(source_id: str) -> Callable[[dict], None]:
@@ -41,6 +61,38 @@ def _build_terminal_callback(source_id: str) -> Callable[[dict], None]:
         )
 
     return emit
+
+
+def _build_settings_response(download_concurrency: int) -> AppSettingsResponse:
+    return AppSettingsResponse(
+        download_concurrency=download_concurrency,
+        min_download_concurrency=SettingsRepository.MIN_DOWNLOAD_CONCURRENCY,
+        max_download_concurrency=SettingsRepository.MAX_DOWNLOAD_CONCURRENCY,
+        default_download_concurrency=SettingsRepository.DEFAULT_DOWNLOAD_CONCURRENCY,
+    )
+
+
+@router.get("/settings")
+async def get_settings() -> AppSettingsResponse:
+    """
+    读取应用设置（当前仅包含并发下载数）。
+    """
+    if state_module.app_state is None:
+        raise HTTPException(status_code=503, detail="App state not initialized")
+    download_concurrency = state_module.app_state.settings_repo.get_download_concurrency()
+    return _build_settings_response(download_concurrency)
+
+
+@router.put("/settings")
+async def update_settings(payload: UpdateAppSettingsRequest) -> AppSettingsResponse:
+    """
+    更新应用设置并立即应用到运行中的队列。
+    """
+    if state_module.app_state is None:
+        raise HTTPException(status_code=503, detail="App state not initialized")
+    saved_value = state_module.app_state.settings_repo.set_download_concurrency(payload.download_concurrency)
+    applied_value = await state_module.app_state.queue_manager.set_concurrency(saved_value)
+    return _build_settings_response(applied_value)
 
 
 @router.get("/dependencies")
